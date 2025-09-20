@@ -130,6 +130,12 @@ export default function GameLanding() {
 		async function submitPrompt(e) {
 			e.preventDefault();
 			if (!challenge) return;
+			const maxStrokes = Math.ceil(2.5 * (challenge.par || 3));
+			if (strokes >= maxStrokes) {
+				setStatus('ended');
+				setError('Out of strokes. Hole ended.');
+				return;
+			}
 			const nextStrokes = strokes + 1;
 			setIsLoading(true);
 			setError(null);
@@ -154,7 +160,7 @@ export default function GameLanding() {
 
 				// Create complete attempt entry
 				const completeAttempt = { prompt: promptText, generation, evaluation };
-				
+    
 				// Check for successful score (≥80%)
 				const similarity = evaluation?.details?.similarity || 0;
 				const scorePercent = similarity * 100;
@@ -165,14 +171,14 @@ export default function GameLanding() {
 					setHistory((h) => [completeAttempt, ...h]);
 					setStrokes(nextStrokes);
 					setStatus('success');
-					
+      
 					// Trigger confetti
 					const similarityDisplay = document.querySelector('.cg-similarity-display');
 					if (similarityDisplay && !similarityDisplay.querySelector('.cg-confetti')) {
 						const confetti = document.createElement('div');
 						confetti.className = 'cg-confetti';
 						similarityDisplay.appendChild(confetti);
-						
+        
 						// Remove confetti after animation
 						setTimeout(() => {
 							confetti.remove();
@@ -186,11 +192,17 @@ export default function GameLanding() {
 						setPromptText('');
 						setGeneratedImage(null);
 						setGeneratedContent(null);
-						
+
 						if (evaluation?.passed) {
 							setStatus('success');
 						} else {
-							setStatus(null);
+							// Check if nextStrokes hits maxStrokes
+							if (nextStrokes >= maxStrokes) {
+								setStatus('ended');
+								setError('You have reached the maximum number of strokes for this hole. Hole ended.');
+							} else {
+								setStatus(null);
+							}
 						}
 					}, 1200);
 
@@ -281,7 +293,7 @@ export default function GameLanding() {
 							<div className="cg-score-title">Score</div>
 							<div className="cg-score-row"><span>Strokes</span><span>{strokes}</span></div>
 							<div className="cg-score-row"><span>Par</span><span>{challenge?.par ?? '—'}</span></div>
-							<div className="cg-score-row"><span>Status</span><span>{status === 'success' ? 'Hole Complete' : 'In Play'}</span></div>
+							<div className="cg-score-row"><span>Status</span><span>{status === 'success' ? 'Hole Complete' : status === 'ended' ? 'Hole Ended' : 'In Play'}</span></div>
 						</div>
 
 						{/* Target box */}
@@ -307,8 +319,12 @@ export default function GameLanding() {
 					<main className="cg-content">
 						{/* Full-width instructions */}
 						<section className="cg-instructions">
-							<h2>Instructions</h2>
-							<p>{challenge?.description}</p>
+										<h2>Instructions</h2>
+										<p>
+											{challenge?.description}
+											<br /><br />
+											To complete the hole, your output must match the target by more than 80%. If you take too many shots (over the allowed limit), you will be forced to give up and the hole will end automatically. Try to finish in as few strokes as possible!
+										</p>
 						</section>
 
 						{/* Prompt/Output table */}
@@ -324,10 +340,10 @@ export default function GameLanding() {
 											value={promptText}
 											onChange={(e) => setPromptText(e.target.value)}
 											rows={challenge?.type === 'code' ? 6 : 4}
-											disabled={status === 'success'}
+											disabled={status === 'success' || status === 'ended'}
 										/>
 										<div className="cg-actions">
-											<button type="submit" className="cg-btn primary" disabled={isLoading || status === 'success'}>
+											<button type="submit" className="cg-btn primary" disabled={isLoading || status === 'success' || status === 'ended'}>
 												{isLoading ? 'Generating…' : 'Submit'}
 											</button>
 											<button type="button" className="cg-btn" onClick={resetChallenge} disabled={isLoading}>Reset</button>
@@ -370,10 +386,13 @@ export default function GameLanding() {
 														<pre className="cg-pre">{generatedContent}</pre>
 													</div>
 												)}
-												{error && <div className="cg-banner error">{error}</div>}
-												{status === 'success' && (
-													<div className="cg-banner success">Hole completed!</div>
-												)}
+														{error && <div className="cg-banner error">{error}</div>}
+														{status === 'success' && (
+															<div className="cg-banner success">Hole completed!</div>
+														)}
+																{status === 'ended' && (
+																	<div className="cg-banner error">Out of strokes. Hole ended.</div>
+																)}
 											</div>
 											{history.length > 0 && history[0].evaluation?.details?.similarity !== undefined && (
 												<div className="cg-similarity-score">
