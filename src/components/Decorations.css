@@ -1,0 +1,16 @@
+.decor-layer{position:fixed;inset:0;pointer-events:none;z-index:0}
+.sun{position:absolute;top:28px;right:48px;width:100px;image-rendering:pixelated;filter:drop-shadow(0 4px 0 #e7c72a)}
+.cloud{position:absolute;width:180px;opacity:.9;image-rendering:pixelated;filter:drop-shadow(0 2px 0 rgba(0,0,0,.08))}
+.cloud-a{top:80px;left:60px}
+.cloud-b{top:140px;left:280px;transform:scale(.9)}
+.flag{position:absolute;bottom:40px;left:60px;width:140px;image-rendering:pixelated;filter:drop-shadow(0 6px 0 rgba(0,0,0,.12))}
+.robot{position:absolute;bottom:16px;width:140px;opacity:.95;image-rendering:pixelated;filter:drop-shadow(0 6px 0 rgba(0,0,0,.12))}
+.robot-left{left:16px;transform:rotate(-2deg)}
+.robot-right{right:16px;transform:rotate(2deg)}
+
+@media (max-width: 900px){
+  .cloud-a{left:20px;top:60px}
+  .cloud-b{left:auto;right:20px;top:110px}
+  .flag{left:20px;bottom:20px;width:100px}
+  .robot{width:110px}
+}

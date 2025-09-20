@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../App.css';
 import './GameLanding.css';
+import Logo from '../logo.svg';
 
 export default function GameLanding() {
 		// Mixed course only (hardcoded)
@@ -148,25 +149,56 @@ export default function GameLanding() {
 					setGeneratedContent(generation.content);
 				}
 
-				// Add a provisional attempt entry with just generation shown
-				const entryBase = { prompt: promptText, generation, evaluation: null };
-				setHistory((h) => [entryBase, ...h]);
-				setStrokes(nextStrokes);
-				setPromptText('');
-
 				// Step 2: Evaluate the generated output on backend
 				const evaluation = await backendEvaluate(challenge, generation);
 
-				// Update latest entry with evaluation result
-				setHistory((h) => {
-					const [latest, ...rest] = h;
-					return [{ ...latest, evaluation }, ...rest];
-				});
+				// Create complete attempt entry
+				const completeAttempt = { prompt: promptText, generation, evaluation };
+				
+				// Check for successful score (≥80%)
+				const similarity = evaluation?.details?.similarity || 0;
+				const scorePercent = similarity * 100;
+				const isSuccess = scorePercent >= 80;
 
-				if (evaluation?.passed) {
+				if (isSuccess) {
+					// Don't slide down, just update state for confetti
+					setHistory((h) => [completeAttempt, ...h]);
+					setStrokes(nextStrokes);
 					setStatus('success');
+					
+					// Trigger confetti
+					const similarityDisplay = document.querySelector('.cg-similarity-display');
+					if (similarityDisplay && !similarityDisplay.querySelector('.cg-confetti')) {
+						const confetti = document.createElement('div');
+						confetti.className = 'cg-confetti';
+						similarityDisplay.appendChild(confetti);
+						
+						// Remove confetti after animation
+						setTimeout(() => {
+							confetti.remove();
+						}, 3000);
+					}
 				} else {
-					setStatus(null);
+					// Normal slide down animation
+					setTimeout(() => {
+						setHistory((h) => [completeAttempt, ...h]);
+						setStrokes(nextStrokes);
+						setPromptText('');
+						setGeneratedImage(null);
+						setGeneratedContent(null);
+						
+						if (evaluation?.passed) {
+							setStatus('success');
+						} else {
+							setStatus(null);
+						}
+					}, 1200);
+
+					// Add sliding class for animation
+					const currentRow = document.querySelector('.cg-current');
+					if (currentRow) {
+						currentRow.classList.add('cg-sliding');
+					}
 				}
 			} catch (err) {
 				console.error(err);
@@ -186,6 +218,18 @@ export default function GameLanding() {
 	function nextHole() {
 		setChallengeIndex((i) => i + 1);
 		resetChallenge();
+	}
+
+	function selectHole(index) {
+		setChallengeIndex(index);
+		resetChallenge();
+	}
+
+	function getScoreColor(similarity) {
+		const score = similarity * 100;
+		if (score >= 80) return 'green';
+		if (score >= 40) return 'orange';
+		return 'red';
 	}
 
 		// Show loading state while challenges are being fetched
@@ -212,157 +256,175 @@ export default function GameLanding() {
 		}
 
 		return (
-			<div className="game-root">
-				<aside className="game-sidebar">
-					<h2>Prompt Golf — Mixed Course</h2>
-
-					<div className="holes">
-						{filtered.map((h, idx) => (
-							<div
-								key={h.id}
-								className={idx === (challengeIndex % filtered.length) ? 'hole active' : 'hole'}
-								onClick={() => {
-									setChallengeIndex(idx);
-									resetChallenge();
-								}}
-							>
-								Hole {h.hole}: {h.title}
-							</div>
-						))}
+			<div className="cg-root">
+				{/* Header: logo left, hole nav center, login right */}
+				<header className="cg-header">
+					<div className="cg-brand">
+						<img src={Logo} alt="Promptly" className="cg-logo" />
+						<h1 className="cg-title">Promptly</h1>
 					</div>
-				</aside>
+					<nav className="cg-nav">
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(0)}>hole1</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(1)}>hole2</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(2)}>hole3</button>
+					</nav>
+					<div className="cg-auth">
+						<button type="button" className="cg-login-btn">Log In</button>
+					</div>
+				</header>
 
-				<main className="game-main">
-					<header className="challenge-header">
-						<h3>
-							Hole {challenge ? challenge.hole : '-'}: {challenge ? challenge.title : '—'}
-						</h3>
-						<p className="challenge-type">Type: {challenge?.type || '—'}</p>
-					</header>
-
-					<section className="challenge-card">
-						<p className="challenge-desc">{challenge?.description}</p>
-
-						<div className="prompt-meta">
-							<div>Strokes: {strokes}</div>
-							<div className="remaining">Par: {challenge?.par ?? '—'}</div>
+				{/* Body: sidebar + full-width content */}
+				<div className="cg-body">
+					{/* Left sidebar: Score + Target */}
+					<aside className="cg-sidebar">
+						<div className="cg-score-card">
+							<div className="cg-score-title">Score</div>
+							<div className="cg-score-row"><span>Strokes</span><span>{strokes}</span></div>
+							<div className="cg-score-row"><span>Par</span><span>{challenge?.par ?? '—'}</span></div>
+							<div className="cg-score-row"><span>Status</span><span>{status === 'success' ? 'Hole Complete' : 'In Play'}</span></div>
 						</div>
 
-						{status === 'success' && (
-							<div className="banner success">Hole completed — {strokes} stroke{strokes === 1 ? '' : 's'} ({strokes - (challenge?.par || 0) >= 0 ? '+' : ''}{strokes - (challenge?.par || 0)})</div>
-						)}
+						{/* Target box */}
+						<div className="cg-target-card">
+							<div className="cg-score-title">Target</div>
+							<div className="cg-target-media">
+								{challenge?.targetImage ? (
+									<img
+										src={`http://localhost:3001${challenge.targetImage}`}
+										alt="Target"
+										className="cg-target-image"
+									/>
+								) : (
+									<div className="cg-target-placeholder">Image placeholder</div>
+								)}
+							</div>
+						</div>
 
-						{/* Special UI for image challenge: render target image and generated image */}
-						{challenge?.type === 'image' && (
-							<div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: 16 }}>
-								<div className="pixel-target">
-									<div className="small muted" style={{ marginBottom: 8 }}>Target image:</div>
-									{challenge?.targetImage ? (
-										<img
-											src={challenge.targetImage.startsWith('http') ? challenge.targetImage : `http://localhost:3001${challenge.targetImage}`}
-											alt="Target"
-											style={{ maxWidth: 160, maxHeight: 160, border: '1px solid #ccc', background: '#fff' }}
+
+					</aside>
+
+					{/* Main content: Instructions + Prompt/Output flow */}
+					<main className="cg-content">
+						{/* Full-width instructions */}
+						<section className="cg-instructions">
+							<h2>Instructions</h2>
+							<p>{challenge?.description}</p>
+						</section>
+
+						{/* Prompt/Output table */}
+						<div className="cg-attempts-table">
+							{/* Current attempt row */}
+							<div className="cg-attempt-row cg-current">
+								<div className="cg-attempt-prompt">
+									<form className="cg-form" onSubmit={submitPrompt}>
+										<textarea
+											id="prompt-input"
+											className="cg-textarea"
+											placeholder={challenge?.type === 'code' ? 'Paste your JavaScript function code here...' : 'Enter your prompt here...'}
+											value={promptText}
+											onChange={(e) => setPromptText(e.target.value)}
+											rows={challenge?.type === 'code' ? 6 : 4}
+											disabled={status === 'success'}
 										/>
-									) : (
-										<div className="small muted">No target image configured</div>
-									)}
+										<div className="cg-actions">
+											<button type="submit" className="cg-btn primary" disabled={isLoading || status === 'success'}>
+												{isLoading ? 'Generating…' : 'Submit'}
+											</button>
+											<button type="button" className="cg-btn" onClick={resetChallenge} disabled={isLoading}>Reset</button>
+										</div>
+									</form>
 								</div>
-
-								<div style={{ minWidth: 160, minHeight: 160 }}>
+								<div className="cg-attempt-output">
 									{isLoading ? (
-										<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, border: '1px solid #ccc', background: '#f5f5f5' }}>Generating...</div>
-									) : error ? (
-										<div style={{ color: 'red', padding: 12 }}>{error}</div>
-									) : generatedImage ? (
-										<div>
-											<div className="small muted" style={{ marginBottom: 8 }}>Your generated image:</div>
-											<img src={generatedImage} alt="Generated" style={{ maxWidth: 160, maxHeight: 160, border: '1px solid #ccc', background: '#fff' }} />
+										<div className="cg-loading-animation">
+											<div className="cg-golf-cart">
+												<div className="cg-cart-body">
+													<div className="cg-cart-roof"></div>
+													<div className="cg-cart-windshield"></div>
+													<div className="cg-robot">
+														<div className="cg-robot-antenna"></div>
+														<div className="cg-robot-head"></div>
+														<div className="cg-robot-body"></div>
+													</div>
+												</div>
+												<div className="cg-cart-wheel cg-wheel-front"></div>
+												<div className="cg-cart-wheel cg-wheel-back"></div>
+												<div className="cg-exhaust">
+													<div className="cg-exhaust-puff cg-puff-1"></div>
+													<div className="cg-exhaust-puff cg-puff-2"></div>
+													<div className="cg-exhaust-puff cg-puff-3"></div>
+												</div>
+											</div>
+											<div className="cg-loading-text">Generating your image...</div>
+										</div>
+									) : (generatedImage || generatedContent || error) ? (
+										<div className="cg-output">
+											<div className="cg-output-content">
+												{generatedImage && (
+													<div className="cg-output-block">
+														<img src={generatedImage} alt="Generated" className="cg-image" />
+													</div>
+												)}
+												{generatedContent && (
+													<div className="cg-output-block">
+														<pre className="cg-pre">{generatedContent}</pre>
+													</div>
+												)}
+												{error && <div className="cg-banner error">{error}</div>}
+												{status === 'success' && (
+													<div className="cg-banner success">Hole completed!</div>
+												)}
+											</div>
+											{history.length > 0 && history[0].evaluation?.details?.similarity !== undefined && (
+												<div className="cg-similarity-score">
+													<div className="cg-score-circle" key={history[0].evaluation.details.similarity}>
+														<div className={`cg-score-ring cg-score-${getScoreColor(history[0].evaluation.details.similarity)}`}>
+															<div className="cg-score-number">
+																{Math.round(history[0].evaluation.details.similarity * 100)}%
+															</div>
+														</div>
+													</div>
+												</div>
+											)}
 										</div>
 									) : (
-										<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, border: '1px solid #eee', background: '#fafafa', color: '#666' }}>Your generated image will appear here</div>
+										<div className="cg-output-placeholder">Intended output will be generated here</div>
 									)}
 								</div>
 							</div>
-						)}
 
-						{/* For text/code show latest generated content */}
-						{(challenge?.type === 'text' || challenge?.type === 'code') && (generatedContent || isLoading || error) && (
-							<div style={{ marginBottom: 16 }}>
-								<div className="small muted" style={{ marginBottom: 8 }}>Your generated output:</div>
-								{isLoading ? (
-									<div style={{ padding: 12, border: '1px solid #ccc', background: '#f5f5f5' }}>Generating...</div>
-								) : error ? (
-									<div style={{ color: 'red', padding: 12 }}>{error}</div>
-								) : (
-									<pre style={{ whiteSpace: 'pre-wrap', margin: 0, padding: 12, border: '1px solid #eee', background: '#fafafa' }}>{generatedContent}</pre>
-								)}
-							</div>
-						)}
-
-						{/* For code challenges show tests */}
-						{challenge?.type === 'code' && (
-							<div className="code-info" style={{ marginBottom: 12 }}>
-								<div className="small">Your submission should define a function named <code>isPalindrome</code>. Tests:</div>
-								<ul>
-									{challenge.tests.map((t, i) => (
-										<li key={i} className="small">{JSON.stringify(t.input)} → {String(t.expected)}</li>
-									))}
-								</ul>
-								<div className="small muted">Submit JavaScript code that defines the function. (This runs in-browser for demo.)</div>
-							</div>
-						)}
-
-						<form className="prompt-form" onSubmit={submitPrompt}>
-							<textarea
-								placeholder={challenge?.type === 'code' ? "Paste your JavaScript function code here..." : "Enter your prompt or response here..."}
-								value={promptText}
-								onChange={(e) => setPromptText(e.target.value)}
-								rows={challenge?.type === 'code' ? 10 : 4}
-								disabled={status === 'success'}
-							/>
-
-							<div className="prompt-actions">
-								<button type="submit" className="primary" disabled={status === 'success'}>
-									Submit
-								</button>
-								<button type="button" onClick={resetChallenge} className="muted">
-									Reset
-								</button>
-								{status === 'success' && (
-									<button type="button" onClick={nextHole} className="primary">
-										Next Hole →
-									</button>
-								)}
-							</div>
-						</form>
-
-						<aside className="attempts">
-							<h4>Attempts</h4>
-							{history.length === 0 && <div className="muted">No attempts yet.</div>}
-							<ul>
-								{history.map((h, i) => (
-									<li key={i} className={h.evaluation?.passed ? 'correct' : 'incorrect'}>
-										<strong>Submission:</strong>
-										<pre style={{ whiteSpace: 'pre-wrap', margin: '6px 0' }}>{h.prompt}</pre>
-										{h.generation?.type === 'image' && h.generation?.imageUrl && (
-											<div style={{ margin: '8px 0' }}>
-												<img src={h.generation.imageUrl.startsWith('http') ? h.generation.imageUrl : `http://localhost:3001${h.generation.imageUrl}`} alt="Generated" style={{ maxWidth: 120, maxHeight: 120, border: '1px solid #ccc', background: '#fff' }} />
+							{/* Previous attempts */}
+							{history.map((attempt, i) => (
+								<div key={i} className="cg-attempt-row">
+									<div className="cg-attempt-prompt">
+										<div className="cg-attempt-text">{attempt.prompt}</div>
+									</div>
+									<div className="cg-attempt-output">
+										<div className="cg-output-content">
+											{attempt.generation?.imageUrl && (
+												<img src={attempt.generation.imageUrl} alt="Generated" className="cg-image" />
+											)}
+											{attempt.generation?.content && (
+												<pre className="cg-pre">{attempt.generation.content}</pre>
+											)}
+										</div>
+										{attempt.evaluation?.details?.similarity !== undefined && (
+											<div className="cg-similarity-score">
+												<div className="cg-score-circle">
+													<div className={`cg-score-ring cg-score-${getScoreColor(attempt.evaluation.details.similarity)}`}>
+														<div className="cg-score-number">
+															{Math.round(attempt.evaluation.details.similarity * 100)}%
+														</div>
+													</div>
+												</div>
 											</div>
 										)}
-										{h.generation?.type !== 'image' && h.generation?.content && (
-											<pre style={{ whiteSpace: 'pre-wrap', margin: '6px 0', padding: 8, background: '#fafafa', border: '1px solid #eee' }}>{h.generation.content}</pre>
-										)}
-										{h.evaluation ? (
-											<div className="small">Result: {h.evaluation.passed ? 'Passed' : 'Failed'} — score: {typeof h.evaluation.score === 'number' ? h.evaluation.score.toFixed(2) : 'n/a'}</div>
-										) : (
-											<div className="small muted">Awaiting evaluation…</div>
-										)}
-									</li>
-								))}
-							</ul>
-						</aside>
-					</section>
-				</main>
+									</div>
+								</div>
+							))}
+						</div>
+					</main>
+				</div>
 			</div>
 		);
 }
