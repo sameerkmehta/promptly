@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../App.css';
 import './GameLanding.css';
 
@@ -52,9 +52,7 @@ const CHALLENGES = [
 	},
 ];
 
-// ...existing code...
-
-function evaluatePrompt(challenge, prompt) {
+export function evaluatePrompt(challenge, prompt) {
 	// Demo evaluation logic per challenge type.
 	if (!prompt || !prompt.trim()) return { correct: false, reason: 'empty' };
 
@@ -148,11 +146,11 @@ export default function GameLanding() {
 				try {
 					data = await post('/api/generate-image');
 				} catch (err) {
-					// fallback to localhost:3001 if relative endpoint unavailable
-					data = await post('http://localhost:3001/api/generate-image');
+					// fallback to localhost:8080 if relative endpoint unavailable
+					data = await post('http://localhost:8080/api/generate-image');
 				}
 				if (!data || !data.imageUrl) throw new Error('No image URL returned from server');
-				const url = data.imageUrl.startsWith('http') ? data.imageUrl : `http://localhost:3001${data.imageUrl}`;
+				const url = data.imageUrl.startsWith('http') ? data.imageUrl : `http://localhost:8080${data.imageUrl}`;
 				setGeneratedImage(url);
 			} catch (err) {
 				setError(err.message || String(err));

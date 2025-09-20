@@ -1,0 +1,15 @@
+/* PartyPage styles */
+.party-page-root {
+  padding: 24px;
+}
+.party-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(30,30,60,0.06);
+}
+.party-controls { display:flex; gap:8px; align-items:center; margin-top:8px }
+.party-submissions { margin-top:12px }
+.party-submissions pre { background:#fafafa; padding:8px; border-radius:6px }
+.party-submission-item { margin-bottom: 12px; background: #fafafa; padding: 8px; border-radius: 6px; }
+.party-submission-item.mine { background: #e6f8ef; }

@@ -1,0 +1,14 @@
+/* Simple styles for the Sandbox prompting page */
+.sandbox-root {
+  padding: 24px;
+}
+.sandbox-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(30,30,60,0.06);
+}
+.sandbox-controls { display:flex; gap:8px; align-items:center; margin-top:8px }
+.sandbox-history { margin-top:12px }
+.sandbox-history pre { background:#fafafa; padding:8px; border-radius:6px }
+.sandbox-result { margin-top:12px; font-weight:600 }

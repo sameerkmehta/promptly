@@ -11,7 +11,7 @@ async function generateImage(prompt) {
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error('API_KEY environment variable is not set');
   
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent';
+//   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent';
 
   const body = {
     contents: [{

@@ -5,44 +5,59 @@ import { config } from 'dotenv';
 
 config(); // Load environment variables
 
-async function callGemini(prompt) {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error('API_KEY environment variable is not set');
+// async function callGemini(prompt) {
+//   const apiKey = process.env.API_KEY;
+//   if (!apiKey) throw new Error('API_KEY environment variable is not set');
   
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+//   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent';
 
-  const body = {
-    contents: [{
-      parts: [{
-        text: prompt
-      }]
-    }]
-  };
+//   const body = {
+//     contents: [{
+//       parts: [{
+//         text: prompt
+//       }]
+//     }]
+//   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'X-goog-api-key': apiKey,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
+//   console.log('Sending request to Gemini:', {
+//     url,
+//     body: JSON.stringify(body, null, 2)
+//   });
 
-  const txt = await res.text();
-  if (res.status >= 400) {
-    throw new Error(`Gemini API error ${res.status}: ${txt}`);
-  }
+//   const response = await fetch(url, {
+//     method: 'POST',
+//     headers: {
+//       'X-goog-api-key': apiKey,
+//       'Content-Type': 'application/json'
+//     },
+//     body: JSON.stringify(body)
+//   });
 
-  let data;
-  try { data = JSON.parse(txt); } catch (e) { data = null; }
-  if (data) {
-    console.log('Full API Response:', JSON.stringify(data, null, 2));
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (text) return text;
-    return JSON.stringify(data);
-  }
-  return txt;
+//   const txt = await response.text();
+//   console.log('Raw Gemini response:', txt);
+  
+//   if (response.status >= 400) {
+//     console.error('Gemini error response:', txt);
+//     throw new Error(`Gemini API error ${response.status}: ${txt}`);
+//   }
+
+//   let data;
+//   try {
+//     data = JSON.parse(txt);
+//   } catch (err) {
+//     console.error('Failed to parse Gemini response:', txt);
+//     throw new Error(`Invalid JSON response from Gemini API: ${txt}`);
+//   }
+
+//   console.log('Parsed API Response:', JSON.stringify(data, null, 2));
+//   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+//   if (text) return text;
+  
+//   throw new Error('Unexpected response format from Gemini API');
+// }
+
+async function callGemini(prompt) {
+  return "GenAI is temporarily disabled.";
 }
 
 async function main() {
