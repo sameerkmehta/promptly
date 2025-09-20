@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import './PartyPage.css';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 
-const API_BASE_URL = 'http://localhost:8080'; // Define the base URL for the API
+const API_BASE_URL = 'http://localhost:8080';
 
 export default function PartyPage() {
   const [partyId, setPartyId] = useState('');
@@ -11,16 +10,7 @@ export default function PartyPage() {
   const [promptText, setPromptText] = useState('');
   const pollRef = useRef(null);
 
-  useEffect(() => {
-    if (partyId) {
-      pollRef.current = setInterval(() => fetchParty(), 2500);
-      fetchParty();
-      return () => clearInterval(pollRef.current);
-    }
-    return undefined;
-  }, [partyId]);
-
-  async function fetchParty() {
+  const fetchParty = useCallback(async () => {
     if (!partyId) return;
     try {
       const resp = await fetch(`${API_BASE_URL}/api/party/${partyId}`);
@@ -30,7 +20,16 @@ export default function PartyPage() {
     } catch (e) {
       console.error('Error fetching party:', e);
     }
-  }
+  }, [partyId]);
+
+  useEffect(() => {
+    if (partyId) {
+      pollRef.current = setInterval(() => fetchParty(), 2500);
+      fetchParty();
+      return () => clearInterval(pollRef.current);
+    }
+    return undefined;
+  }, [partyId, fetchParty]);
 
   async function createParty() {
     if (!playerName || !partyTheme) {
@@ -88,56 +87,58 @@ export default function PartyPage() {
   }
 
   return (
-    <div className="party-page-root">
-      <h2>Party Mode</h2>
-      <div className="party-card">
-        <p className="small muted">One person creates a party with a theme. Others join and submit prompts. Submissions are judged by the theme and players can vote.</p>
+    <main className="layout">
+      <div className="party-page-root">
+        <h2>Party Mode</h2>
+        <div className="party-card glass">
+          <p className="small muted">One person creates a party with a theme. Others join and submit prompts. Submissions are judged by the theme and players can vote.</p>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <input placeholder="Your name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
-          <input placeholder="Party theme (e.g. '80s sci-fi poster')" value={partyTheme} onChange={(e) => setPartyTheme(e.target.value)} />
-          <button className="primary" onClick={createParty}>Create Party</button>
-          <input placeholder="Party ID to join" value={partyId} onChange={(e) => setPartyId(e.target.value)} />
-          <button className="muted" onClick={joinParty}>Join</button>
-        </div>
-
-        {party && (
-          <div style={{ marginBottom: 12 }}>
-            <div><strong>Party:</strong> {party.id} — Theme: {party.theme}</div>
-            <div className="small muted">Host: {party.host} — Participants: {party.participants.length}</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <input placeholder="Your name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
+            <input placeholder="Party theme (e.g. '80s sci-fi poster')" value={partyTheme} onChange={(e) => setPartyTheme(e.target.value)} />
+            <button className="btn primary" onClick={createParty}>Create Party</button>
+            <input placeholder="Party ID to join" value={partyId} onChange={(e) => setPartyId(e.target.value)} />
+            <button className="btn muted" onClick={joinParty}>Join</button>
           </div>
-        )}
 
-        {party && (
-          <form onSubmit={submitToParty}>
-            <textarea placeholder="Enter your prompt to match the theme..." value={promptText} onChange={(e) => setPromptText(e.target.value)} rows={4} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', fontFamily: 'inherit' }} />
-            <div className="party-controls">
-              <button type="submit" className="primary">Submit to Party</button>
-              <button type="button" className="muted" onClick={() => setPromptText('')}>Clear</button>
+          {party && (
+            <div style={{ marginBottom: 12 }}>
+              <div><strong>Party:</strong> {party.id} — Theme: {party.theme}</div>
+              <div className="small muted">Host: {party.host} — Participants: {party.participants.length}</div>
             </div>
-          </form>
-        )}
+          )}
 
-        <div className="party-submissions">
-          <h4>Submissions</h4>
-          {!party && <div className="muted">No party selected.</div>}
-          {party && party.submissions.length === 0 && <div className="muted">No submissions yet.</div>}
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {party && party.submissions.map((s) => (
-              <li key={s.id} className={`party-submission-item ${s.name === playerName ? 'mine' : ''}`}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  <div><strong>{s.name}</strong> — <span className="small muted">{new Date(s.createdAt).toLocaleTimeString()}</span></div>
-                  <div>
-                    <button className="vote-button" onClick={() => vote(s.id)}>Vote ({s.votes || 0})</button>
+          {party && (
+            <form onSubmit={submitToParty}>
+              <textarea placeholder="Enter your prompt to match the theme..." value={promptText} onChange={(e) => setPromptText(e.target.value)} rows={4} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', fontFamily: 'inherit' }} />
+              <div className="party-controls">
+                <button type="submit" className="btn primary">Submit to Party</button>
+                <button type="button" className="btn muted" onClick={() => setPromptText('')}>Clear</button>
+              </div>
+            </form>
+          )}
+
+          <div className="party-submissions">
+            <h4>Submissions</h4>
+            {!party && <div className="muted">No party selected.</div>}
+            {party && party.submissions.length === 0 && <div className="muted">No submissions yet.</div>}
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {party && party.submissions.map((s) => (
+                <li key={s.id} className={`party-submission-item ${s.name === playerName ? 'mine' : ''}`}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <div><strong>{s.name}</strong> — <span className="small muted">{new Date(s.createdAt).toLocaleTimeString()}</span></div>
+                    <div>
+                      <button className="btn muted" onClick={() => vote(s.id)}>Vote ({s.votes || 0})</button>
+                    </div>
                   </div>
-                </div>
-                <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{s.prompt}</pre>
-                {s.result && <div className="party-submission-result"><strong>AI Response:</strong> {s.result}</div>}
-              </li>
-            ))}
-          </ul>
+                  <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{s.prompt}</pre>
+                  {s.result && <div className="party-submission-result"><strong>AI Response:</strong> {s.result}</div>}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
