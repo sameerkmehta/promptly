@@ -2,6 +2,13 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Usage
+In the project directory, run
+### `npm start`
+In a separate command line, cd to server and run
+### `node server.js`
+Include your .env file for gemini in the server directory
+
 ## Available Scripts
 
 In the project directory, you can run:
