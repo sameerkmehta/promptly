@@ -17,6 +17,7 @@ export default function GameLanding() {
 		const [generatedContent, setGeneratedContent] = useState(null); // for text/code
 		const [isLoading, setIsLoading] = useState(false);
 		const [error, setError] = useState(null);
+		const [currentEvaluation, setCurrentEvaluation] = useState(null);
 		
 		// Challenges state
 		const [challenges, setChallenges] = useState([]);
@@ -135,6 +136,7 @@ export default function GameLanding() {
 			setError(null);
 			setGeneratedImage(null);
 			setGeneratedContent(null);
+			setCurrentEvaluation(null);
 			try {
 				// Step 1: Generate on backend
 				const genResp = await backendGenerate(challenge, promptText);
@@ -152,6 +154,9 @@ export default function GameLanding() {
 				// Step 2: Evaluate the generated output on backend
 				const evaluation = await backendEvaluate(challenge, generation);
 
+				// Update current evaluation immediately to show correct score
+				setCurrentEvaluation(evaluation);
+
 				// Create complete attempt entry
 				const completeAttempt = { prompt: promptText, generation, evaluation };
 				
@@ -161,17 +166,16 @@ export default function GameLanding() {
 				const isSuccess = scorePercent >= 80;
 
 				if (isSuccess) {
-					// Don't slide down, just update state for confetti
-					setHistory((h) => [completeAttempt, ...h]);
+					// Don't slide down or add to history, just update state for confetti
 					setStrokes(nextStrokes);
 					setStatus('success');
 					
 					// Trigger confetti
-					const similarityDisplay = document.querySelector('.cg-similarity-display');
-					if (similarityDisplay && !similarityDisplay.querySelector('.cg-confetti')) {
+					const outputArea = document.querySelector('.cg-output');
+					if (outputArea && !outputArea.querySelector('.cg-confetti')) {
 						const confetti = document.createElement('div');
 						confetti.className = 'cg-confetti';
-						similarityDisplay.appendChild(confetti);
+						outputArea.appendChild(confetti);
 						
 						// Remove confetti after animation
 						setTimeout(() => {
@@ -186,6 +190,7 @@ export default function GameLanding() {
 						setPromptText('');
 						setGeneratedImage(null);
 						setGeneratedContent(null);
+						setCurrentEvaluation(null);
 						
 						if (evaluation?.passed) {
 							setStatus('success');
@@ -213,6 +218,9 @@ export default function GameLanding() {
 			setStrokes(0);
 			setHistory([]);
 			setStatus(null);
+			setGeneratedImage(null);
+			setGeneratedContent(null);
+			setCurrentEvaluation(null);
 		}
 
 	function nextHole() {
@@ -230,6 +238,19 @@ export default function GameLanding() {
 		if (score >= 80) return 'green';
 		if (score >= 40) return 'orange';
 		return 'red';
+	}
+
+	function getGolfScore(strokes, par) {
+		const difference = strokes - par;
+		if (difference <= -4) return 'condor';
+		if (difference === -3) return 'albatross';
+		if (difference === -2) return 'eagle';
+		if (difference === -1) return 'birdie';
+		if (difference === 0) return 'par';
+		if (difference === 1) return 'bogey';
+		if (difference === 2) return 'double bogey';
+		if (difference === 3) return 'triple bogey';
+		return `${difference > 0 ? '+' : ''}${difference}`;
 	}
 
 		// Show loading state while challenges are being fetched
@@ -264,9 +285,15 @@ export default function GameLanding() {
 						<h1 className="cg-title">Promptly</h1>
 					</div>
 					<nav className="cg-nav">
-						<button type="button" className="cg-nav-btn" onClick={() => selectHole(0)}>hole1</button>
-						<button type="button" className="cg-nav-btn" onClick={() => selectHole(1)}>hole2</button>
-						<button type="button" className="cg-nav-btn" onClick={() => selectHole(2)}>hole3</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(0)}>
+							<span className="cg-hole-icon">⛳</span>Hole 1
+						</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(1)}>
+							<span className="cg-hole-icon">⛳</span>Hole 2
+						</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(2)}>
+							<span className="cg-hole-icon">⛳</span>Hole 3
+						</button>
 					</nav>
 					<div className="cg-auth">
 						<button type="button" className="cg-login-btn">Log In</button>
@@ -372,15 +399,17 @@ export default function GameLanding() {
 												)}
 												{error && <div className="cg-banner error">{error}</div>}
 												{status === 'success' && (
-													<div className="cg-banner success">Hole completed!</div>
+													<div className="cg-banner success">
+														Hole completed! You scored a {getGolfScore(strokes, challenge?.par || 3)}!
+													</div>
 												)}
 											</div>
-											{history.length > 0 && history[0].evaluation?.details?.similarity !== undefined && (
+											{currentEvaluation?.details?.similarity !== undefined && (
 												<div className="cg-similarity-score">
-													<div className="cg-score-circle" key={history[0].evaluation.details.similarity}>
-														<div className={`cg-score-ring cg-score-${getScoreColor(history[0].evaluation.details.similarity)}`}>
+													<div className="cg-score-circle" key={currentEvaluation.details.similarity}>
+														<div className={`cg-score-ring cg-score-${getScoreColor(currentEvaluation.details.similarity)}`}>
 															<div className="cg-score-number">
-																{Math.round(history[0].evaluation.details.similarity * 100)}%
+																{Math.round(currentEvaluation.details.similarity * 100)}%
 															</div>
 														</div>
 													</div>
