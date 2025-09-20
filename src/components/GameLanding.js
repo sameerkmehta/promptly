@@ -52,6 +52,8 @@ const CHALLENGES = [
 	},
 ];
 
+// ...existing code...
+
 function evaluatePrompt(challenge, prompt) {
 	// Demo evaluation logic per challenge type.
 	if (!prompt || !prompt.trim()) return { correct: false, reason: 'empty' };
@@ -114,10 +116,52 @@ export default function GameLanding() {
 		const [strokes, setStrokes] = useState(0);
 	const [history, setHistory] = useState([]);
 		const [status, setStatus] = useState(null); // null | 'success'
+
+		// Image generation state
+		const [generatedImage, setGeneratedImage] = useState(null);
+		const [isLoading, setIsLoading] = useState(false);
+		const [error, setError] = useState(null);
 		const filtered = CHALLENGES; // only mixed course
 		const challenge = filtered[challengeIndex % filtered.length];
 
-		function submitPrompt(e) {
+		async function generateImage(prompt) {
+			setIsLoading(true);
+			setError(null);
+			setGeneratedImage(null);
+			const post = async (url) => {
+				const resp = await fetch(url, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ prompt }),
+				});
+				if (!resp.ok) {
+					const txt = await resp.text().catch(() => '<no body>');
+					const err = new Error(`Image generation failed (${resp.status}): ${txt}`);
+					err.status = resp.status;
+					throw err;
+				}
+				return resp.json();
+			};
+
+			try {
+				let data;
+				try {
+					data = await post('/api/generate-image');
+				} catch (err) {
+					// fallback to localhost:3001 if relative endpoint unavailable
+					data = await post('http://localhost:3001/api/generate-image');
+				}
+				if (!data || !data.imageUrl) throw new Error('No image URL returned from server');
+				const url = data.imageUrl.startsWith('http') ? data.imageUrl : `http://localhost:3001${data.imageUrl}`;
+				setGeneratedImage(url);
+			} catch (err) {
+				setError(err.message || String(err));
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		async function submitPrompt(e) {
 			e.preventDefault();
 			if (!challenge) return;
 			const nextStrokes = strokes + 1;
@@ -127,7 +171,11 @@ export default function GameLanding() {
 			setStrokes(nextStrokes);
 			setPromptText('');
 
-			// In golf-style scoring we allow unlimited strokes; success ends the hole and records strokes
+			// If this is the image hole, generate an image and show it
+			if (challenge.type === 'image') {
+				await generateImage(promptText);
+			}
+
 			if (result.correct) {
 				setStatus('success');
 			} else {
@@ -188,17 +236,34 @@ export default function GameLanding() {
 							<div className="banner success">Hole completed — {strokes} stroke{strokes === 1 ? '' : 's'} ({strokes - (challenge?.par || 0) >= 0 ? '+' : ''}{strokes - (challenge?.par || 0)})</div>
 						)}
 
-						{/* Special UI for image challenge: render pixel art target */}
-						{challenge?.type === 'image' && (
-							<div className="pixel-target" style={{ marginBottom: 12 }}>
-								<div style={{ display: 'grid', gridTemplateColumns: `repeat(${challenge.pixelData[0].length}, 18px)`, gap: 2 }}>
-									{challenge.pixelData.flat().map((c, i) => (
-										<div key={i} style={{ width: 18, height: 18, background: c || 'transparent', border: c ? '1px solid rgba(0,0,0,0.06)' : '1px dashed rgba(0,0,0,0.03)', boxSizing: 'border-box' }} />
-									))}
-								</div>
-								<div className="small muted" style={{ marginTop: 8 }}>Target pixel art (8x8). Try to craft a pixel-art prompt that would reproduce this.</div>
-							</div>
-						)}
+						{/* Special UI for image challenge: render pixel art target and generated image */}
+								{challenge?.type === 'image' && (
+									<div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: 16 }}>
+										<div className="pixel-target">
+											<div style={{ display: 'grid', gridTemplateColumns: `repeat(${challenge.pixelData[0].length}, 18px)`, gap: 2 }}>
+												{challenge.pixelData.flat().map((c, i) => (
+													<div key={i} style={{ width: 18, height: 18, background: c || 'transparent', border: c ? '1px solid rgba(0,0,0,0.06)' : '1px dashed rgba(0,0,0,0.03)', boxSizing: 'border-box' }} />
+												))}
+											</div>
+											<div className="small muted" style={{ marginTop: 8 }}>Target pixel art (8x8). Try to craft a pixel-art prompt that would reproduce this.</div>
+										</div>
+
+										<div style={{ minWidth: 160, minHeight: 160 }}>
+											{isLoading ? (
+												<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, border: '1px solid #ccc', background: '#f5f5f5' }}>Generating...</div>
+											) : error ? (
+												<div style={{ color: 'red', padding: 12 }}>{error}</div>
+											) : generatedImage ? (
+												<div>
+													<div className="small muted" style={{ marginBottom: 8 }}>Your generated image:</div>
+													<img src={generatedImage} alt="Generated" style={{ maxWidth: 160, maxHeight: 160, border: '1px solid #ccc', background: '#fff' }} />
+												</div>
+											) : (
+												<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, border: '1px solid #eee', background: '#fafafa', color: '#666' }}>Your generated image will appear here</div>
+											)}
+										</div>
+									</div>
+								)}
 
 						{/* For code challenges show tests */}
 						{challenge?.type === 'code' && (
