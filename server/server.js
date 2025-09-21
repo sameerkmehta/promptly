@@ -15,6 +15,19 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public')); // To serve the generated images
 
+// Serve React build (if present) so a single Render service can host frontend + backend
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const buildPath = path.join(__dirname, '..', 'build');
+if (fs.existsSync(buildPath)) {
+  app.use(express.static(buildPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+}
+
 // Connect to MongoDB (non-fatal). If the DB is down we continue running but
 // Party routes will return 503 until the DB becomes available.
 connectDB().then((ok) => {
