@@ -1,0 +1,22 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified Robot Head -->
+  <rect x="8" y="6" width="16" height="12" rx="2" fill="#2f5f5f"/>
+  
+  <!-- Antenna -->
+  <line x1="16" y1="6" x2="16" y2="3" stroke="#2f5f5f" stroke-width="1"/>
+  <circle cx="16" cy="2" r="1" fill="#2f5f5f"/>
+  
+  <!-- Eyes -->
+  <circle cx="12" cy="10" r="1.5" fill="#ffffff"/>
+  <circle cx="20" cy="10" r="1.5" fill="#ffffff"/>
+  
+  <!-- Body -->
+  <rect x="10" y="18" width="12" height="10" rx="2" fill="#2f5f5f"/>
+  
+  <!-- Golf Club -->
+  <line x1="6" y1="20" x2="26" y2="14" stroke="#8b4513" stroke-width="1.5"/>
+  <ellipse cx="25" cy="13" rx="2" ry="1" fill="#2f5f5f"/>
+  
+  <!-- Golf Ball -->
+  <circle cx="28" cy="28" r="2" fill="#ffffff"/>
+</svg>
