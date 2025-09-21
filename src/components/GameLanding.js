@@ -337,6 +337,15 @@ export default function GameLanding() {
 						<button type="button" className="cg-nav-btn" onClick={() => selectHole(2)}>
 							<span className="cg-hole-icon">⛳</span>Hole 3
 						</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(3)}>
+							<span className="cg-hole-icon">⛳</span>Hole 4
+						</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(4)}>
+							<span className="cg-hole-icon">⛳</span>Hole 5
+						</button>
+						<button type="button" className="cg-nav-btn" onClick={() => selectHole(5)}>
+							<span className="cg-hole-icon">⛳</span>Hole 6
+						</button>
 					</nav>
 						<div className="cg-auth" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
 							<button type="button" className="cg-party-btn" onClick={() => window.location.href = '/party'}>Party</button>
@@ -392,63 +401,71 @@ export default function GameLanding() {
 					{/* Main scrollable content area */}
 					<div className="cg-main-content">
 						<main className="cg-content">
-						{/* Full-width instructions */}
-						<section className="cg-instructions">
-										<h2>Instructions</h2>
-										<p>
-											{challenge?.description}
-											<br /><br />
-											To complete the hole, your output must match the target by more than 80%. Try to finish in as few strokes as possible!
-										</p>
-						</section>
 
-						{/* Centered prompt input (single column). Prompt history box removed; include-history is a toggle button below the textarea. */}
-						<div className="cg-centered-prompt">
-							<div className="cg-form-col">
-								<form className="cg-form" onSubmit={submitPrompt}>
-									<textarea
-										id="prompt-input"
-										className="cg-textarea"
-										placeholder={challenge?.type === 'code' ? 'Paste your JavaScript function code here...' : 'Enter your prompt here...'}
-										value={promptText}
-										onChange={handlePromptChange}
-										rows={challenge?.type === 'code' ? 6 : 6}
-										disabled={isLoading}
-										maxLength={MAX_PROMPT_LENGTH}
-									/>
+						{/* If no challenge is defined (new holes), render a blank page for now */}
+						{!challenge ? (
+							<div style={{ padding: 40 }} />
+						) : (
+							<>
+								{/* Full-width instructions */}
+								<section className="cg-instructions">
+									<h2>Instructions</h2>
+									<p>
+										{challenge?.description}
+										<br /><br />
+										To complete the hole, your output must match the target by more than 80%. Try to finish in as few strokes as possible!
+									</p>
+								</section>
 
-									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 12 }}>
-										<div className={`cg-char-counter ${getCounterClass()}`} style={{ fontSize: 12 }}>
-											{promptText.length}/{MAX_PROMPT_LENGTH}
-										</div>
-
-										<div style={{ display: 'flex', gap: 8 }}>
-											<button type="submit" className="cg-btn primary" disabled={isLoading}>
-												{isLoading ? 'Generating…' : 'Submit'}
-											</button>
-											<button type="button" className="cg-btn" onClick={resetPrompt} disabled={isLoading}>Reset</button>
-
-											{/* Include-history toggle (styled green/red inline) */}
-											<button
-												type="button"
-												className="cg-btn"
-												onClick={() => setIncludeHistory((v) => !v)}
+								{/* Centered prompt input (single column). Prompt history box removed; include-history is a toggle button below the textarea. */}
+								<div className="cg-centered-prompt">
+									<div className="cg-form-col">
+										<form className="cg-form" onSubmit={submitPrompt}>
+											<textarea
+												id="prompt-input"
+												className="cg-textarea"
+												placeholder={challenge?.type === 'code' ? 'Paste your JavaScript function code here...' : 'Enter your prompt here...'}
+												value={promptText}
+												onChange={handlePromptChange}
+												rows={challenge?.type === 'code' ? 6 : 6}
 												disabled={isLoading}
-												style={{
-													background: includeHistory ? '#ecffe9' : '#ffecec',
-													borderColor: includeHistory ? '#cbe7c5' : '#f0c9c9',
-													color: includeHistory ? '#166b27' : '#a22929',
-													padding: '8px 12px',
-													fontWeight: 800
-												}}
-											>
-												{includeHistory ? 'Include History: ON' : 'Include History: OFF'}
-											</button>
-										</div>
+												maxLength={MAX_PROMPT_LENGTH}
+											/>
+
+											<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 12 }}>
+												<div className={`cg-char-counter ${getCounterClass()}`} style={{ fontSize: 12 }}>
+													{promptText.length}/{MAX_PROMPT_LENGTH}
+												</div>
+
+												<div style={{ display: 'flex', gap: 8 }}>
+													<button type="submit" className="cg-btn primary" disabled={isLoading}>
+														{isLoading ? 'Generating…' : 'Submit'}
+													</button>
+													<button type="button" className="cg-btn" onClick={resetPrompt} disabled={isLoading}>Reset</button>
+
+													{/* Include-history toggle (styled green/red inline) */}
+													<button
+														type="button"
+														className="cg-btn"
+														onClick={() => setIncludeHistory((v) => !v)}
+														disabled={isLoading}
+														style={{
+															background: includeHistory ? '#ecffe9' : '#ffecec',
+															borderColor: includeHistory ? '#cbe7c5' : '#f0c9c9',
+															color: includeHistory ? '#166b27' : '#a22929',
+															padding: '8px 12px',
+															fontWeight: 800
+														}}
+													>
+														{includeHistory ? 'Include History: ON' : 'Include History: OFF'}
+													</button>
+												</div>
+											</div>
+										</form>
 									</div>
-								</form>
-							</div>
-						</div>
+								</div>
+							</>
+						)}
 
 						{/* Scrollable attempts stack */}
 						<div className="cg-attempts-stack">
