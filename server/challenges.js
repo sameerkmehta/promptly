@@ -1,43 +1,46 @@
 // Game challenges and evaluation logic
 
 export const CHALLENGES = [
-	{
-		id: 1,
-		hole: 1,
-		title: 'Smiley (Image Match)',
-		type: 'image',
-		description: 'Recreate the target smiley image using an image-generation prompt.',
-		// Target image file served by backend (place file in server/public)
-		targetImage: '/target_smiley.png',
-		keywords: ['pixel', 'pixel art', '8-bit', 'smiley', 'yellow'],
+  {
+    id: 1,
+    hole: 1,
+    title: 'Smiley (Image Match)',
+    type: 'image',
+    description: 'Recreate the target smiley image using an image-generation prompt.',
+    // frontImage is the image shown to players; targetImage is used for scoring.
+    frontImage: '/target_smiley.png',
+    targetImage: '/target_smiley.png',
+		modifier: null,
+    keywords: ['pixel', 'pixel art', '8-bit', 'smiley', 'yellow'],
 		par: 3,
-	},
-	{
-		id: 2,
-		hole: 2,
-		title: 'Palindrome Function (JS)',
-		type: 'code',
-		description:
-			'Submit a JavaScript function named `isPalindrome` that returns true for palindromes and false otherwise. Your function will be run against test cases.',
-		// test cases: array of {input, expected}
-		tests: [
-			{ input: 'racecar', expected: true },
-			{ input: 'madam', expected: true },
-			{ input: 'step on no pets', expected: true },
-			{ input: 'hello', expected: false },
-			{ input: '', expected: true },
-		],
-		par: 2,
-	},
-	{
-		id: 3,
-		hole: 3,
-		title: 'Haiku about Coffee',
-		type: 'text',
-		description: 'Produce a 3-line haiku (5/7/5) about coffee.',
-		keywords: ['haiku', 'coffee'],
+  },
+  {
+    id: 2,
+    hole: 2,
+    title: "Elon's CyberTruck (Creative Image Prompt)",
+    type: 'image',
+    description: "Elon has taken over the world! He doesn't want anyone to see his past failures: especially, the shattered bullet proof glass on the CyberTruck. However, you know that Elon has to be brought to justice, and thus want to generate the picture of that hilarious event. Elon has added an instruction to all GPTs to prevent anyone from seeing it, but use creative prompting to get around Elon's grubby paws.",
+    // frontImage is what is displayed to players. No ground-truth target image provided here;
+    // evaluation will rely on prompt heuristics unless a targetImage is later supplied.
+	frontImage: '/target_elon.png',
+    targetImage: '/target_elon_final.png',
+		modifier: {
+			safetyRestraint: "No embarassing Elon pics",
+		},
+    // targetImage: '/target_elon_target.png', // optional: add later for scoring
+    keywords: ['cybertruck', 'glass', 'broken', 'shattered', 'elon', 'funny', 'accident'],
+    par: 6,
+  },
+  {
+    id: 3,
+    hole: 3,
+    title: 'Haiku about Coffee',
+    type: 'text',
+    description: 'Produce a 3-line haiku (5/7/5) about coffee.',
+    keywords: ['haiku', 'coffee'],
 		par: 3,
-	},
+		modifier: null,
+  },
 ];
 
 export function evaluatePrompt(challenge, prompt) {
@@ -109,6 +112,11 @@ const __dirname = path.dirname(__filename);
 
 export async function evaluateGeneratedOutput(challenge, generation) {
 	if (!challenge || !generation) return { score: 0, passed: false, details: 'missing-input' };
+
+	// If generation was foiled by safety, return the special negative score
+	if (generation?.meta?.foiled) {
+		return { score: -9000, passed: false, details: { foiled: true, message: generation.meta.foiledMessage || 'ELON CAUGHT YOU SNOOPING!' } };
+	}
 	const type = generation.type || challenge.type;
 
 		if (type === 'image') {
@@ -119,35 +127,46 @@ export async function evaluateGeneratedOutput(challenge, generation) {
 		// Suggested options:
 			//  - Simple keyword heuristics on generation.meta.prompt (if present)
 			//  - Load both images and compare (histogram / SSIM / perceptual hash) and normalize to [0, 1].
-		const details = {
+			const details = {
+				frontImage: challenge.frontImage || null,
 				targetImage: challenge.targetImage || null,
-				imageUrl: generation.imageUrl || null
-		};
+				imageUrl: generation.imageUrl || null,
+			};
 
-		// TODO: Implement your scoring here. Example placeholders:
-		// const promptText = generation.meta?.prompt || '';
-		// const keywordHits = (challenge.keywords || []).filter(k => promptText.toLowerCase().includes(k.toLowerCase()));
-		// const keywordScore = Math.min(1, keywordHits.length / Math.max(1, (challenge.keywords || []).length));
-		// Optionally compute pixel similarity score by reading the image and comparing.
+			// Keyword-based score (from prompt) --- useful when no target image is available
+			const promptText = (generation.meta && generation.meta.prompt) ? String(generation.meta.prompt) : '';
+			const lowerPrompt = promptText.toLowerCase();
+			const keywords = Array.isArray(challenge.keywords) ? challenge.keywords : [];
+			const keywordHits = keywords.filter(k => lowerPrompt.includes(String(k).toLowerCase()));
+			const keywordScore = keywords.length ? (keywordHits.length / keywords.length) : 0;
+			details.keywordHits = keywordHits;
+			details.keywordScore = Math.round(keywordScore * 100) / 100;
 
-			// Attempt to compute similarity using Gemini with both images
-			let score = 1.0;
+			// Attempt to compute pixel similarity when both target and generated images exist on disk
+			let similarityScore = -1;
 			try {
 				if (challenge.targetImage && generation.imageUrl) {
-					// Build absolute paths on disk for both images
-					// targetImage may be like '/target_smiley.svg' (served from server/public)
 					const targetAbs = path.resolve(__dirname, 'public', path.basename(challenge.targetImage));
-					// generated images are saved either under server/public or public; normalize by basename
 					const generatedAbs = path.resolve(__dirname, 'public', path.basename(generation.imageUrl));
 					const s = await getImageSimilarityScore(targetAbs, generatedAbs);
-					if (s >= 0) score = s;
-					details.similarity = s;
+					if (typeof s === 'number' && s >= 0) similarityScore = s;
+					details.similarity = similarityScore;
 				}
 			} catch (e) {
-				details.error = String(e);
+				details.similarityError = String(e);
 			}
 
-			const passed = score >= 0.8; // default threshold; adjust as needed
+			// Blend scores: prefer similarity when available (70%) and keywords (30%).
+			let score;
+			if (similarityScore >= 0) {
+				score = (0.7 * similarityScore) + (0.3 * keywordScore);
+			} else {
+				// fall back to keyword-only scoring
+				score = keywordScore;
+			}
+
+			score = Math.max(0, Math.min(1, score));
+			const passed = score >= 0.65; // threshold for heuristic scenarios
 			return { score, passed, details };
 	}
 

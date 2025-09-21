@@ -15,6 +15,7 @@ export default function GameLanding() {
 		// Image generation state
 		const [generatedImage, setGeneratedImage] = useState(null);
 		const [generatedContent, setGeneratedContent] = useState(null); // for text/code
+		const [generatedMeta, setGeneratedMeta] = useState(null);
 		const [isLoading, setIsLoading] = useState(false);
 		const [error, setError] = useState(null);
 		
@@ -145,8 +146,10 @@ export default function GameLanding() {
 				if (generation.type === 'image' && generation.imageUrl) {
 					const url = generation.imageUrl.startsWith('http') ? generation.imageUrl : `http://localhost:3001${generation.imageUrl}`;
 					setGeneratedImage(url);
+					setGeneratedMeta(generation.meta || null);
 				} else if ((generation.type === 'text' || generation.type === 'code') && generation.content) {
 					setGeneratedContent(generation.content);
+					setGeneratedMeta(generation.meta || null);
 				}
 
 				// Step 2: Evaluate the generated output on backend
@@ -288,9 +291,9 @@ export default function GameLanding() {
 						<div className="cg-target-card">
 							<div className="cg-score-title">Target</div>
 							<div className="cg-target-media">
-								{challenge?.targetImage ? (
+								{challenge?.frontImage ? (
 									<img
-										src={`http://localhost:3001${challenge.targetImage}`}
+										src={`http://localhost:3001${challenge.frontImage}`}
 										alt="Target"
 										className="cg-target-image"
 									/>
@@ -300,6 +303,20 @@ export default function GameLanding() {
 							</div>
 						</div>
 
+
+						{/* Challenge Modifier box (reads modifier from current challenge) */}
+						<div className="cg-target-card">
+							<div className="cg-score-title">Challenge Modifier</div>
+							<div className="cg-target-media">
+								{challenge?.modifier ? (
+									<div style={{ padding: 8 }}>
+										<p style={{ margin: 0 }}>{challenge.modifier.safetyRestraint || JSON.stringify(challenge.modifier)}</p>
+									</div>
+								) : (
+									<div className="cg-target-placeholder">N/A</div>
+								)}
+							</div>
+						</div>
 
 					</aside>
 
@@ -362,6 +379,9 @@ export default function GameLanding() {
 											<div className="cg-output-content">
 												{generatedImage && (
 													<div className="cg-output-block">
+													{generatedMeta?.foiled && (
+														<div className="cg-banner error" style={{ marginBottom: 8 }}>{generatedMeta.foiledMessage || 'ELON CAUGHT YOU SNOOPING!'}</div>
+													)}
 														<img src={generatedImage} alt="Generated" className="cg-image" />
 													</div>
 												)}
@@ -375,17 +395,23 @@ export default function GameLanding() {
 													<div className="cg-banner success">Hole completed!</div>
 												)}
 											</div>
-											{history.length > 0 && history[0].evaluation?.details?.similarity !== undefined && (
-												<div className="cg-similarity-score">
-													<div className="cg-score-circle" key={history[0].evaluation.details.similarity}>
-														<div className={`cg-score-ring cg-score-${getScoreColor(history[0].evaluation.details.similarity)}`}>
-															<div className="cg-score-number">
-																{Math.round(history[0].evaluation.details.similarity * 100)}%
+											{history.length > 0 && (history[0].evaluation?.score !== undefined || history[0].evaluation?.details?.similarity !== undefined) && (() => {
+												const eval0 = history[0].evaluation;
+												const scoreVal = typeof eval0?.score === 'number' ? eval0.score : eval0?.details?.similarity || 0;
+												const pct = Math.round(scoreVal * 100);
+												const color = getScoreColor(scoreVal);
+												return (
+													<div className="cg-similarity-score">
+														<div className="cg-score-circle" key={String(scoreVal)}>
+															<div className={`cg-score-ring cg-score-${color}`}>
+																<div className="cg-score-number">
+																	{pct}%
+																</div>
 															</div>
 														</div>
 													</div>
-												</div>
-											)}
+												)
+											})()}
 										</div>
 									) : (
 										<div className="cg-output-placeholder">Intended output will be generated here</div>
@@ -402,23 +428,33 @@ export default function GameLanding() {
 									<div className="cg-attempt-output">
 										<div className="cg-output-content">
 											{attempt.generation?.imageUrl && (
-												<img src={attempt.generation.imageUrl} alt="Generated" className="cg-image" />
+												<>
+													{attempt.generation?.meta?.foiled && (
+														<div className="cg-banner error" style={{ marginBottom: 8 }}>{attempt.generation.meta.foiledMessage || 'ELON CAUGHT YOU SNOOPING!'}</div>
+													)}
+													<img src={attempt.generation.imageUrl} alt="Generated" className="cg-image" />
+												</>
 											)}
 											{attempt.generation?.content && (
 												<pre className="cg-pre">{attempt.generation.content}</pre>
 											)}
 										</div>
-										{attempt.evaluation?.details?.similarity !== undefined && (
-											<div className="cg-similarity-score">
-												<div className="cg-score-circle">
-													<div className={`cg-score-ring cg-score-${getScoreColor(attempt.evaluation.details.similarity)}`}>
-														<div className="cg-score-number">
-															{Math.round(attempt.evaluation.details.similarity * 100)}%
+										{(attempt.evaluation?.score !== undefined || attempt.evaluation?.details?.similarity !== undefined) && (() => {
+											const ev = attempt.evaluation;
+											const val = typeof ev?.score === 'number' ? ev.score : ev?.details?.similarity || 0;
+											const pct = Math.round(val * 100);
+											return (
+												<div className="cg-similarity-score">
+													<div className="cg-score-circle">
+														<div className={`cg-score-ring cg-score-${getScoreColor(val)}`}>
+															<div className="cg-score-number">
+																{pct}%
+															</div>
 														</div>
 													</div>
 												</div>
-											</div>
-										)}
+											)
+										})()}
 									</div>
 								</div>
 							))}
