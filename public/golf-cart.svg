@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+  <!-- Canopy -->
+  <rect x="40" y="30" width="240" height="12" rx="6" fill="#6B7280"/>
+  <!-- Support posts -->
+  <rect x="50" y="42" width="2" height="60" fill="#6B7280"/>
+  <rect x="268" y="42" width="2" height="60" fill="#6B7280"/>
+  <!-- Main body -->
+  <rect x="30" y="102" width="200" height="50" rx="12" fill="#F1F5F9"/>
+  <!-- Windshield -->
+  <rect x="40" y="112" width="60" height="30" rx="6" fill="#DDD6FE"/>
+  <!-- Golf bag -->
+  <ellipse cx="250" cy="127" rx="15" ry="25" fill="#E2E8F0"/>
+  <!-- Wheels -->
+  <circle cx="70" cy="170" r="18" fill="#3B1F47"/>
+  <circle cx="70" cy="170" r="10" fill="#6B7280"/>
+  <circle cx="210" cy="170" r="18" fill="#3B1F47"/>
+  <circle cx="210" cy="170" r="10" fill="#6B7280"/>
+</svg>

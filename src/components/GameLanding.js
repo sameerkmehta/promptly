@@ -18,6 +18,7 @@ export default function GameLanding() {
 		const [isLoading, setIsLoading] = useState(false);
 		const [error, setError] = useState(null);
 		const [currentEvaluation, setCurrentEvaluation] = useState(null);
+		const [processingPrompt, setProcessingPrompt] = useState('');
 		
 		// Challenges state
 		const [challenges, setChallenges] = useState([]);
@@ -132,14 +133,17 @@ export default function GameLanding() {
 			e.preventDefault();
 			if (!challenge) return;
 			const nextStrokes = strokes + 1;
+			const currentPrompt = promptText;
 			setIsLoading(true);
 			setError(null);
 			setGeneratedImage(null);
 			setGeneratedContent(null);
 			setCurrentEvaluation(null);
+			setPromptText(''); // Clear prompt immediately for next input
+			setProcessingPrompt(currentPrompt); // Store current prompt for display
 			try {
 				// Step 1: Generate on backend
-				const genResp = await backendGenerate(challenge, promptText);
+				const genResp = await backendGenerate(challenge, currentPrompt);
 				const generation = genResp?.generation;
 				if (!generation) throw new Error('No generation returned');
 
@@ -158,7 +162,7 @@ export default function GameLanding() {
 				setCurrentEvaluation(evaluation);
 
 				// Create complete attempt entry
-				const completeAttempt = { prompt: promptText, generation, evaluation };
+				const completeAttempt = { prompt: currentPrompt, generation, evaluation };
 				
 				// Check for successful score (≥80%)
 				const similarity = evaluation?.details?.similarity || 0;
@@ -169,6 +173,7 @@ export default function GameLanding() {
 					// Don't slide down or add to history, just update state for confetti
 					setStrokes(nextStrokes);
 					setStatus('success');
+					setProcessingPrompt('');
 					
 					// Trigger confetti
 					const outputArea = document.querySelector('.cg-output');
@@ -187,10 +192,10 @@ export default function GameLanding() {
 					setTimeout(() => {
 						setHistory((h) => [completeAttempt, ...h]);
 						setStrokes(nextStrokes);
-						setPromptText('');
 						setGeneratedImage(null);
 						setGeneratedContent(null);
 						setCurrentEvaluation(null);
+						setProcessingPrompt('');
 						
 						if (evaluation?.passed) {
 							setStatus('success');
@@ -221,6 +226,11 @@ export default function GameLanding() {
 			setGeneratedImage(null);
 			setGeneratedContent(null);
 			setCurrentEvaluation(null);
+			setProcessingPrompt('');
+		}
+
+		function resetPrompt() {
+			setPromptText('');
 		}
 
 	function nextHole() {
@@ -278,7 +288,7 @@ export default function GameLanding() {
 
 		return (
 			<div className="cg-root">
-				{/* Header: logo left, hole nav center, login right */}
+				{/* Header: logo left, hole nav center, login right - stays at top */}
 				<header className="cg-header">
 					<div className="cg-brand">
 						<img src={Logo} alt="Promptly" className="cg-logo" />
@@ -300,9 +310,8 @@ export default function GameLanding() {
 					</div>
 				</header>
 
-				{/* Body: sidebar + full-width content */}
 				<div className="cg-body">
-					{/* Left sidebar: Score + Target */}
+					{/* Fixed left sidebar: Score + Target only */}
 					<aside className="cg-sidebar">
 						<div className="cg-score-card">
 							<div className="cg-score-title">Score</div>
@@ -330,102 +339,98 @@ export default function GameLanding() {
 
 					</aside>
 
-					{/* Main content: Instructions + Prompt/Output flow */}
-					<main className="cg-content">
+					{/* Main scrollable content area */}
+					<div className="cg-main-content">
+						<main className="cg-content">
 						{/* Full-width instructions */}
 						<section className="cg-instructions">
 							<h2>Instructions</h2>
 							<p>{challenge?.description}</p>
 						</section>
 
-						{/* Prompt/Output table */}
-						<div className="cg-attempts-table">
-							{/* Current attempt row */}
-							<div className="cg-attempt-row cg-current">
-								<div className="cg-attempt-prompt">
-									<form className="cg-form" onSubmit={submitPrompt}>
-										<textarea
-											id="prompt-input"
-											className="cg-textarea"
-											placeholder={challenge?.type === 'code' ? 'Paste your JavaScript function code here...' : 'Enter your prompt here...'}
-											value={promptText}
-											onChange={(e) => setPromptText(e.target.value)}
-											rows={challenge?.type === 'code' ? 6 : 4}
-											disabled={status === 'success'}
-										/>
-										<div className="cg-actions">
-											<button type="submit" className="cg-btn primary" disabled={isLoading || status === 'success'}>
-												{isLoading ? 'Generating…' : 'Submit'}
-											</button>
-											<button type="button" className="cg-btn" onClick={resetChallenge} disabled={isLoading}>Reset</button>
-										</div>
-									</form>
+						{/* Centered prompt input */}
+						<div className="cg-centered-prompt">
+							<form className="cg-form" onSubmit={submitPrompt}>
+								<textarea
+									id="prompt-input"
+									className="cg-textarea"
+									placeholder={challenge?.type === 'code' ? 'Paste your JavaScript function code here...' : 'Enter your prompt here...'}
+									value={promptText}
+									onChange={(e) => setPromptText(e.target.value)}
+									rows={challenge?.type === 'code' ? 6 : 4}
+									disabled={isLoading}
+								/>
+								<div className="cg-actions">
+									<button type="submit" className="cg-btn primary" disabled={isLoading}>
+										{isLoading ? 'Generating…' : 'Submit'}
+									</button>
+									<button type="button" className="cg-btn primary" onClick={resetPrompt} disabled={isLoading}>Reset</button>
 								</div>
-								<div className="cg-attempt-output">
-									{isLoading ? (
-										<div className="cg-loading-animation">
-											<div className="cg-golf-cart">
-												<div className="cg-cart-body">
-													<div className="cg-cart-roof"></div>
-													<div className="cg-cart-windshield"></div>
-													<div className="cg-robot">
-														<div className="cg-robot-antenna"></div>
-														<div className="cg-robot-head"></div>
-														<div className="cg-robot-body"></div>
-													</div>
+							</form>
+						</div>
+
+						{/* Scrollable attempts stack */}
+						<div className="cg-attempts-stack">
+							{/* Current attempt processing */}
+							{(isLoading || generatedImage || generatedContent || error) && (
+								<div className="cg-attempt-card">
+									<div className="cg-attempt-prompt-display">
+										<div className="cg-attempt-text">{processingPrompt}</div>
+									</div>
+									<div className="cg-attempt-output">
+										{isLoading ? (
+											<div className="cg-loading-animation">
+												<div className="cg-golf-cart">
+													<img src="/golf-cart.svg" alt="Golf Cart" />
 												</div>
-												<div className="cg-cart-wheel cg-wheel-front"></div>
-												<div className="cg-cart-wheel cg-wheel-back"></div>
-												<div className="cg-exhaust">
-													<div className="cg-exhaust-puff cg-puff-1"></div>
-													<div className="cg-exhaust-puff cg-puff-2"></div>
-													<div className="cg-exhaust-puff cg-puff-3"></div>
+												<div className="cg-loading-text">Generating your image...</div>
+											</div>
+										) : (generatedImage || generatedContent || error) ? (
+											<div className="cg-output">
+												<div className="cg-output-content">
+													{generatedImage && (
+														<div className="cg-output-block">
+															<img src={generatedImage} alt="Generated" className="cg-image" />
+															{status === 'success' && (
+																<div className="cg-banner success">
+																	Hole completed! You scored a {getGolfScore(strokes, challenge?.par || 3)}!
+																</div>
+															)}
+														</div>
+													)}
+													{generatedContent && (
+														<div className="cg-output-block">
+															<pre className="cg-pre">{generatedContent}</pre>
+															{status === 'success' && (
+																<div className="cg-banner success">
+																	Hole completed! You scored a {getGolfScore(strokes, challenge?.par || 3)}!
+																</div>
+															)}
+														</div>
+													)}
+													{error && <div className="cg-banner error">{error}</div>}
 												</div>
-											</div>
-											<div className="cg-loading-text">Generating your image...</div>
-										</div>
-									) : (generatedImage || generatedContent || error) ? (
-										<div className="cg-output">
-											<div className="cg-output-content">
-												{generatedImage && (
-													<div className="cg-output-block">
-														<img src={generatedImage} alt="Generated" className="cg-image" />
-													</div>
-												)}
-												{generatedContent && (
-													<div className="cg-output-block">
-														<pre className="cg-pre">{generatedContent}</pre>
-													</div>
-												)}
-												{error && <div className="cg-banner error">{error}</div>}
-												{status === 'success' && (
-													<div className="cg-banner success">
-														Hole completed! You scored a {getGolfScore(strokes, challenge?.par || 3)}!
-													</div>
-												)}
-											</div>
-											{currentEvaluation?.details?.similarity !== undefined && (
-												<div className="cg-similarity-score">
-													<div className="cg-score-circle" key={currentEvaluation.details.similarity}>
-														<div className={`cg-score-ring cg-score-${getScoreColor(currentEvaluation.details.similarity)}`}>
-															<div className="cg-score-number">
-																{Math.round(currentEvaluation.details.similarity * 100)}%
+												{currentEvaluation?.details?.similarity !== undefined && (
+													<div className="cg-similarity-score">
+														<div className="cg-score-circle" key={currentEvaluation.details.similarity}>
+															<div className={`cg-score-ring cg-score-${getScoreColor(currentEvaluation.details.similarity)}`}>
+																<div className="cg-score-number">
+																	{Math.round(currentEvaluation.details.similarity * 100)}%
+																</div>
 															</div>
 														</div>
 													</div>
-												</div>
-											)}
-										</div>
-									) : (
-										<div className="cg-output-placeholder">Intended output will be generated here</div>
-									)}
+												)}
+											</div>
+										) : null}
+									</div>
 								</div>
-							</div>
+							)}
 
 							{/* Previous attempts */}
 							{history.map((attempt, i) => (
-								<div key={i} className="cg-attempt-row">
-									<div className="cg-attempt-prompt">
+								<div key={i} className="cg-attempt-card">
+									<div className="cg-attempt-prompt-display">
 										<div className="cg-attempt-text">{attempt.prompt}</div>
 									</div>
 									<div className="cg-attempt-output">
@@ -453,6 +458,7 @@ export default function GameLanding() {
 							))}
 						</div>
 					</main>
+					</div>
 				</div>
 			</div>
 		);
