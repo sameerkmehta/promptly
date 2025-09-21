@@ -109,11 +109,11 @@
     align-items:center; 
     padding: 12px 16px; 
 }
-.cg-brand { display:flex; align-items:center; gap: 10px; justify-self: start }
+.cg-brand { display:flex; align-items:center; gap: 12px; justify-self: start; }
 .cg-logo { height: 36px }
-.cg-title { margin:0; font-family: 'Grandstander', cursive; font-weight: 900; font-size: 24px; color: var(--cg-tree); text-shadow: 0 2px 0 #e2f1e8 }
+.cg-title { margin:0; font-family: 'Grandstander', cursive; font-weight: 900; font-size: 24px; color: var(--cg-tree); text-shadow: 0 2px 0 #e2f1e8; line-height: 1; display: flex; align-items: center; }
 .cg-nav { display:flex; gap: 10px; justify-self: center; align-items: center; justify-content: center; }
-.cg-nav-btn { background: #ffffff; color: var(--cg-ink); border:2px solid var(--cg-edge); padding: 8px 12px; border-radius: 10px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #d6e6dc; display: flex; align-items: center; gap: 4px; }
+.cg-nav-btn { background: #ffffff; color: var(--cg-ink); border: none; padding: 8px 12px; border-radius: 10px; font-weight: 900; cursor: pointer; box-shadow: none; display: flex; align-items: center; gap: 4px; }
 .cg-nav-btn:hover { transform: translateY(-2px) }
 
 .cg-hole-icon { font-size: 14px; line-height: 1; }
