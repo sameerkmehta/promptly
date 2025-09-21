@@ -18,7 +18,9 @@ export default function GameLanding() {
 		const [generatedMeta, setGeneratedMeta] = useState(null);
 		const [isLoading, setIsLoading] = useState(false);
 		const [error, setError] = useState(null);
-		const [currentEvaluation, setCurrentEvaluation] = useState(null);
+	const [currentEvaluation, setCurrentEvaluation] = useState(null);
+	const [finalAttempt, setFinalAttempt] = useState(null); // store the winning attempt so UI can show final results
+	const [finalStrokes, setFinalStrokes] = useState(null);
 		const [processingPrompt, setProcessingPrompt] = useState('');
 
 		// Prompt limits
@@ -154,6 +156,8 @@ export default function GameLanding() {
 		async function submitPrompt(e) {
 			e.preventDefault();
 			if (!challenge) return;
+			// prevent further submissions after hole has ended or already successful
+			if (status === 'ended' || status === 'success' || finalAttempt) return;
 			// No max-strokes limit; each submit counts as a stroke
 			const nextStrokes = strokes + 1;
 			const currentPrompt = promptText;
@@ -193,6 +197,7 @@ export default function GameLanding() {
 
 				// Update current evaluation immediately to show correct score
 				setCurrentEvaluation(evaluation);
+				console.debug('[GameLanding] submitPrompt - setCurrentEvaluation', { evaluation });
 
 				// Create complete attempt entry
 				const completeAttempt = { prompt: currentPrompt, generation, evaluation };
@@ -203,38 +208,29 @@ export default function GameLanding() {
 				const isSuccess = scorePercent >= 80;
 
 				if (isSuccess) {
-					// Don't slide down or add to history, just update state for confetti
-					setStrokes(nextStrokes);
-					setStatus('success');
-					setProcessingPrompt('');
-					
-					// Trigger confetti
-					const outputArea = document.querySelector('.cg-output');
-					if (outputArea && !outputArea.querySelector('.cg-confetti')) {
-						const confetti = document.createElement('div');
-						confetti.className = 'cg-confetti';
-						outputArea.appendChild(confetti);
-						
-						// Remove confetti after animation
-						setTimeout(() => {
-							confetti.remove();
-						}, 3000);
-					}
+					// finalize via helper
+					finalizeWin(completeAttempt, nextStrokes);
 				} else {
 					// Normal slide down animation
 					setTimeout(() => {
+						console.debug('[GameLanding] post-slide timeout - evaluation', { evaluation });
+						// Only treat as a completed hole when similarity >= 80%.
+						const sim = evaluation?.details?.similarity ?? evaluation?.score ?? 0;
+						console.debug('[GameLanding] post-slide timeout - sim:', sim);
+						if (sim >= 0.8) {
+							// finalize the hole using the same finalization path
+							finalizeWin(completeAttempt, nextStrokes);
+							return;
+						}
+						// Not a finalizing attempt: record it and clear the temporary generated content
 						setHistory((h) => [completeAttempt, ...h]);
 						setStrokes(nextStrokes);
 						setGeneratedImage(null);
 						setGeneratedContent(null);
 						setCurrentEvaluation(null);
 						setProcessingPrompt('');
-						
-						if (evaluation?.passed) {
-							setStatus('success');
-						} else {
-							setStatus(null);
-						}
+						// only set status to null if it hasn't already been finalized
+						setStatus((prev) => ((prev === 'ended' || prev === 'success') ? prev : null));
 					}, 1200);
 
 					// Add sliding class for animation
@@ -251,11 +247,57 @@ export default function GameLanding() {
 			}
 		}
 
+		// Centralized finalization helper: set final attempt, strokes, status and trigger confetti
+		function finalizeWin(completeAttempt, strokesCount) {
+			try {
+				console.debug('[GameLanding] finalizeWin called', { completeAttempt, strokesCount, status });
+				setFinalAttempt(completeAttempt);
+				setFinalStrokes(strokesCount);
+				setStrokes(strokesCount);
+				setStatus('ended');
+				// Ensure generated content remains visible if provided
+				if (completeAttempt?.generation) {
+					const gen = completeAttempt.generation;
+					if (gen.type === 'image' && gen.imageUrl) {
+						const url = gen.imageUrl.startsWith('http') ? gen.imageUrl : `http://localhost:3001${gen.imageUrl}`;
+						setGeneratedImage(url);
+						setGeneratedContent(null);
+					} else if (gen.content) {
+						setGeneratedContent(gen.content);
+						setGeneratedImage(null);
+					}
+				}
+
+				// Trigger confetti (idempotent)
+				const outputArea = document.querySelector('.cg-output');
+				if (outputArea) {
+					let confetti = outputArea.querySelector('.cg-confetti');
+					if (!confetti) {
+						confetti = document.createElement('div');
+						confetti.className = 'cg-confetti';
+						outputArea.appendChild(confetti);
+						for (let i = 0; i < 20; i++) {
+							const span = document.createElement('span');
+							span.textContent = ['🎉','✨','🎊','🥳','💫'][i % 5];
+							span.style.left = `${Math.random() * 100}%`;
+							span.style.animationDelay = `${Math.random() * 0.6}s`;
+							confetti.appendChild(span);
+						}
+						setTimeout(() => confetti.remove(), 3500);
+					}
+				}
+			} catch (err) {
+				console.error('Error finalizing win:', err);
+			}
+		}
+
 		function resetChallenge() {
+			console.debug('[GameLanding] resetChallenge called - resetting status to null');
 			setPromptText('');
 			setStrokes(0);
 			setHistory([]);
 			setStatus(null);
+			setFinalAttempt(null);
 			setGeneratedImage(null);
 			setGeneratedContent(null);
 			setCurrentEvaluation(null);
@@ -265,6 +307,20 @@ export default function GameLanding() {
 		function resetPrompt() {
 			setPromptText('');
 		}
+
+		// If currentEvaluation updates after rendering, ensure we finalize the hole
+		useEffect(() => {
+		console.debug('[GameLanding] useEffect currentEvaluation', { currentEvaluation, status, processingPrompt });
+			if (!currentEvaluation) return;
+			const sim = currentEvaluation?.details?.similarity ?? currentEvaluation?.score;
+			if (sim === undefined) return;
+			if (sim >= 0.8 && !(status === 'ended' || status === 'success')) {
+			console.debug('[GameLanding] useEffect - sim >= 0.8, finalizing', { sim, status });
+				const generation = generatedImage ? { type: 'image', imageUrl: generatedImage } : (generatedContent ? { type: 'text', content: generatedContent } : null);
+				const completeAttempt = { prompt: processingPrompt, generation, evaluation: currentEvaluation };
+				finalizeWin(completeAttempt, (finalStrokes ?? strokes));
+			}
+		}, [currentEvaluation]);
 
 	function nextHole() {
 		setChallengeIndex((i) => i + 1);
@@ -337,15 +393,6 @@ export default function GameLanding() {
 						<button type="button" className="cg-nav-btn" onClick={() => selectHole(2)}>
 							<span className="cg-hole-icon">⛳</span>Hole 3
 						</button>
-						<button type="button" className="cg-nav-btn" onClick={() => selectHole(3)}>
-							<span className="cg-hole-icon">⛳</span>Hole 4
-						</button>
-						<button type="button" className="cg-nav-btn" onClick={() => selectHole(4)}>
-							<span className="cg-hole-icon">⛳</span>Hole 5
-						</button>
-						<button type="button" className="cg-nav-btn" onClick={() => selectHole(5)}>
-							<span className="cg-hole-icon">⛳</span>Hole 6
-						</button>
 					</nav>
 						<div className="cg-auth" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
 							<button type="button" className="cg-party-btn" onClick={() => window.location.href = '/party'}>Party</button>
@@ -358,9 +405,9 @@ export default function GameLanding() {
 					<aside className="cg-sidebar">
 						<div className="cg-score-card">
 							<div className="cg-score-title">Score</div>
-							<div className="cg-score-row"><span>Strokes</span><span>{strokes}</span></div>
+							<div className="cg-score-row"><span>Strokes</span><span>{finalStrokes ?? strokes}</span></div>
 							<div className="cg-score-row"><span>Par</span><span>{challenge?.par ?? '—'}</span></div>
-							<div className="cg-score-row"><span>Status</span><span>{status === 'success' ? 'Hole Complete' : status === 'ended' ? 'Hole Ended' : 'In Play'}</span></div>
+							<div className="cg-score-row"><span>Status</span><span>{(status === 'success' || status === 'ended' || finalAttempt) ? 'Hole Complete' : 'In Play'}</span></div>
 						</div>
 
 						{/* Target box */}
@@ -438,8 +485,8 @@ export default function GameLanding() {
 												</div>
 
 												<div style={{ display: 'flex', gap: 8 }}>
-													<button type="submit" className="cg-btn primary" disabled={isLoading}>
-														{isLoading ? 'Generating…' : 'Submit'}
+													<button type="submit" className="cg-btn primary" disabled={isLoading || status === 'ended' || status === 'success'}>
+															{isLoading ? 'Generating…' : (status === 'ended' || status === 'success' || finalAttempt ? 'Hole Complete' : 'Submit')}
 													</button>
 													<button type="button" className="cg-btn" onClick={resetPrompt} disabled={isLoading}>Reset</button>
 
@@ -489,7 +536,7 @@ export default function GameLanding() {
 													{generatedImage && (
 														<div className="cg-output-block">
 															<img src={generatedImage} alt="Generated" className="cg-image" />
-															{status === 'success' && (
+															{(status === 'success' || finalAttempt) && (
 																<div className="cg-banner success">
 																	Hole completed! You scored a {getGolfScore(strokes, challenge?.par || 3)}!
 																</div>
@@ -499,7 +546,7 @@ export default function GameLanding() {
 													{generatedContent && (
 														<div className="cg-output-block">
 															<pre className="cg-pre">{generatedContent}</pre>
-															{status === 'success' && (
+															{(status === 'success' || finalAttempt) && (
 																<div className="cg-banner success">
 																	Hole completed! You scored a {getGolfScore(strokes, challenge?.par || 3)}!
 																</div>
@@ -508,15 +555,21 @@ export default function GameLanding() {
 													)}
 													{error && <div className="cg-banner error">{error}</div>}
 												</div>
-												{currentEvaluation?.details?.similarity !== undefined && (
+												{((finalAttempt && finalAttempt?.evaluation?.details?.similarity !== undefined) || currentEvaluation?.details?.similarity !== undefined) && (
 													<div className="cg-similarity-score">
-														<div className="cg-score-circle" key={currentEvaluation.details.similarity}>
-															<div className={`cg-score-ring cg-score-${getScoreColor(currentEvaluation.details.similarity)}`}>
-																<div className="cg-score-number">
-																	{Math.round(currentEvaluation.details.similarity * 100)}%
+														{(() => {
+															const ev = (finalAttempt ? finalAttempt?.evaluation : currentEvaluation) || {};
+															const sim = ev?.details?.similarity ?? (ev?.score ?? 0);
+															return (
+																<div className="cg-score-circle" key={sim}>
+																	<div className={`cg-score-ring cg-score-${getScoreColor(sim)}`}>
+																		<div className="cg-score-number">
+																			{Math.round(sim * 100)}%
+																		</div>
+																	</div>
 																</div>
-															</div>
-														</div>
+															)
+														})()}
 													</div>
 												)}
 											</div>

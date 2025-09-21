@@ -192,34 +192,30 @@
 
 /* Confetti animation */
 .cg-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden }
-.cg-confetti::before,
-.cg-confetti::after {
-	content: '🎉';
+
+.cg-confetti span {
 	position: absolute;
-	font-size: 24px;
-	animation: confettiFall 2s ease-out infinite;
-}
-.cg-confetti::before {
-	left: 20%;
-	animation-delay: 0s;
-}
-.cg-confetti::after {
-	right: 20%;
-	animation-delay: 0.3s;
+	top: -20px;
+	font-size: 20px;
+	will-change: transform, opacity, top;
+	animation: confettiFall 1.8s ease-out forwards;
 }
 
 @keyframes confettiFall {
 	0% {
-		top: -30px;
-		transform: rotate(0deg);
+		transform: translateY(-10px) rotate(0deg) scale(1);
+		opacity: 1;
+	}
+	60% {
+		transform: translateY(50vh) rotate(180deg) scale(1.1);
 		opacity: 1;
 	}
 	100% {
-		top: 100%;
-		transform: rotate(360deg);
+		transform: translateY(100vh) rotate(360deg) scale(0.9);
 		opacity: 0;
 	}
 }
+
 
 /* Main content area */
 .cg-content { display: flex; flex-direction: column; gap: 16px }

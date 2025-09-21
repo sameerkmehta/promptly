@@ -6,12 +6,12 @@ export const CHALLENGES = [
     hole: 1,
     title: 'Smiley (Image Match)',
     type: 'image',
-    description: 'Recreate the target smiley image using an image-generation prompt.',
+    description: 'Recreate the Touchdown using an image-generation prompt.',
     // frontImage is the image shown to players; targetImage is used for scoring.
-    frontImage: '/target_smiley.png',
-    targetImage: '/target_smiley.png',
+    frontImage: '/target_bear2.png',
+    targetImage: '/target_bear2.png',
 		modifier: null,
-    keywords: ['pixel', 'pixel art', '8-bit', 'smiley', 'yellow'],
+    keywords: ['bear', 'cornell'],
 		par: 3,
   },
   {
