@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../App.css';
 import './GameLanding.css';
-import Logo from '../logo.svg';
+import Logo from '../robot_full_transparent.svg';
 
 export default function GameLanding() {
 		// Mixed course only (hardcoded)

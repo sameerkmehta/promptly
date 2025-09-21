@@ -1,7 +1,7 @@
 /* Cartoon Golf theme — fresh start */
 
 :root {
-	--cg-sky: #cfe8ff;
+	--cg-sky: #89e3fe;
 	--cg-fairway: #b9e6a1;
 	--cg-rough: #7c9b54;
 	--cg-tree: #2f7d32;
@@ -82,7 +82,7 @@
 
 .cg-root { 
     min-height: 100vh; 
-    background-image: url('/golf-course-bg.svg');
+    background-image: url('../golf_bg.png');
     background-size: cover;
     background-position: center center;
     background-attachment: fixed; /* Keep background fixed during scroll */
