@@ -20,12 +20,6 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const buildPath = path.join(__dirname, '..', 'build');
-if (fs.existsSync(buildPath)) {
-  app.use(express.static(buildPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(buildPath, 'index.html'));
-  });
-}
 
 // Connect to MongoDB (non-fatal). If the DB is down we continue running but
 // Party routes will return 503 until the DB becomes available.
@@ -339,6 +333,14 @@ app.get('/api/challenges', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+// Serve React build (if present) so a single Render service can host frontend + backend
+if (fs.existsSync(buildPath)) {
+  app.use(express.static(buildPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
