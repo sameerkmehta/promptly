@@ -133,6 +133,12 @@ export default function GameLanding() {
 		async function submitPrompt(e) {
 			e.preventDefault();
 			if (!challenge) return;
+			const maxStrokes = Math.ceil(2.5 * (challenge.par || 3));
+			if (strokes >= maxStrokes) {
+				setStatus('ended');
+				setError('Out of strokes. Hole ended.');
+				return;
+			}
 			const nextStrokes = strokes + 1;
 			const currentPrompt = promptText;
 			setIsLoading(true);
@@ -203,7 +209,13 @@ export default function GameLanding() {
 						if (evaluation?.passed) {
 							setStatus('success');
 						} else {
-							setStatus(null);
+							// Check if nextStrokes hits maxStrokes
+							if (nextStrokes >= maxStrokes) {
+								setStatus('ended');
+								setError('You have reached the maximum number of strokes for this hole. Hole ended.');
+							} else {
+								setStatus(null);
+							}
 						}
 					}, 1200);
 
@@ -308,9 +320,10 @@ export default function GameLanding() {
 							<span className="cg-hole-icon">⛳</span>Hole 3
 						</button>
 					</nav>
-					<div className="cg-auth">
-						<button type="button" className="cg-login-btn">Log In</button>
-					</div>
+						<div className="cg-auth" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+							<button type="button" className="cg-party-btn" onClick={() => window.location.href = '/party'}>Party</button>
+							<button type="button" className="cg-login-btn">Log In</button>
+						</div>
 				</header>
 
 				<div className="cg-body">
@@ -320,7 +333,7 @@ export default function GameLanding() {
 							<div className="cg-score-title">Score</div>
 							<div className="cg-score-row"><span>Strokes</span><span>{strokes}</span></div>
 							<div className="cg-score-row"><span>Par</span><span>{challenge?.par ?? '—'}</span></div>
-							<div className="cg-score-row"><span>Status</span><span>{status === 'success' ? 'Hole Complete' : 'In Play'}</span></div>
+							<div className="cg-score-row"><span>Status</span><span>{status === 'success' ? 'Hole Complete' : status === 'ended' ? 'Hole Ended' : 'In Play'}</span></div>
 						</div>
 
 						{/* Target box */}
@@ -361,8 +374,12 @@ export default function GameLanding() {
 						<main className="cg-content">
 						{/* Full-width instructions */}
 						<section className="cg-instructions">
-							<h2>Instructions</h2>
-							<p>{challenge?.description}</p>
+										<h2>Instructions</h2>
+										<p>
+											{challenge?.description}
+											<br /><br />
+											To complete the hole, your output must match the target by more than 80%. If you take too many shots (over the allowed limit), you will be forced to give up and the hole will end automatically. Try to finish in as few strokes as possible!
+										</p>
 						</section>
 
 						{/* Centered prompt input */}
