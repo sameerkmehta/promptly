@@ -1,0 +1,60 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sky background -->
+  <defs>
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9DCFFD;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="1200" height="800" fill="url(#skyGradient)"/>
+  
+  <!-- Clouds -->
+  <ellipse cx="150" cy="100" rx="40" ry="25" fill="#ffffff" opacity="0.9"/>
+  <ellipse cx="120" cy="110" rx="30" ry="20" fill="#ffffff" opacity="0.9"/>
+  <ellipse cx="180" cy="105" rx="25" ry="15" fill="#ffffff" opacity="0.9"/>
+  
+  <ellipse cx="950" cy="140" rx="35" ry="20" fill="#ffffff" opacity="0.9"/>
+  <ellipse cx="980" cy="130" rx="28" ry="18" fill="#ffffff" opacity="0.9"/>
+  
+  <!-- Rolling hills - back to front -->
+  <ellipse cx="600" cy="600" rx="800" ry="200" fill="#8BC34A"/>
+  <ellipse cx="300" cy="550" rx="600" ry="150" fill="#9CCC65"/>
+  <ellipse cx="900" cy="570" rx="700" ry="180" fill="#7CB342"/>
+  <ellipse cx="200" cy="650" rx="500" ry="100" fill="#AED581"/>
+  <ellipse cx="1000" cy="670" rx="400" ry="80" fill="#9CCC65"/>
+  
+  <!-- Trees on left -->
+  <ellipse cx="80" cy="450" rx="40" ry="60" fill="#388E3C"/>
+  <ellipse cx="70" cy="440" rx="35" ry="50" fill="#4CAF50"/>
+  <ellipse cx="90" cy="440" rx="30" ry="45" fill="#66BB6A"/>
+  
+  <!-- Tree on right with trunk -->
+  <ellipse cx="1100" cy="400" rx="50" ry="70" fill="#388E3C"/>
+  <ellipse cx="1090" cy="390" rx="45" ry="60" fill="#4CAF50"/>
+  <ellipse cx="1110" cy="390" rx="40" ry="55" fill="#66BB6A"/>
+  <rect x="1095" y="460" width="10" height="30" fill="#8D6E63"/>
+  
+  <!-- Sand bunkers -->
+  <ellipse cx="900" cy="580" rx="120" ry="50" fill="#FFD54F"/>
+  <ellipse cx="905" cy="575" rx="100" ry="40" fill="#FFECB3"/>
+  <ellipse cx="600" cy="650" rx="150" ry="60" fill="#FFD54F"/>
+  <ellipse cx="605" cy="645" rx="130" ry="50" fill="#FFECB3"/>
+  
+  <!-- Golf flag -->
+  <rect x="195" y="370" width="4" height="100" fill="#424242"/>
+  <!-- Orange/red flag -->
+  <polygon points="199,370 260,385 260,410 199,395" fill="#FF6B35"/>
+  <polygon points="199,395 240,402 240,420 199,415" fill="#FF5722"/>
+  
+  <!-- Golf ball -->
+  <circle cx="230" cy="480" r="5" fill="#ffffff"/>
+  <circle cx="230" cy="480" r="7" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/>
+  
+  <!-- Putting green -->
+  <ellipse cx="200" cy="475" rx="50" ry="35" fill="#66BB6A" opacity="0.8"/>
+  <ellipse cx="200" cy="475" rx="30" ry="22" fill="#4CAF50" opacity="0.6"/>
+  
+  <!-- Black hole -->
+  <circle cx="200" cy="475" r="3" fill="#000000"/>
+</svg>

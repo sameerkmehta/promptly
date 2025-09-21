@@ -82,11 +82,18 @@
 
 .cg-root { 
     min-height: 100vh; 
-    background: linear-gradient(180deg, var(--cg-sky) 0 30%, var(--cg-fairway) 30% 100%); 
+    background-image: url('/golf-course-bg.svg');
+    background-size: cover;
+    background-position: center center;
     background-attachment: fixed; /* Keep background fixed during scroll */
+    background-repeat: no-repeat;
     color: var(--cg-ink); 
-    font-family: 'Nunito', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
+    font-family: 'Nunito', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    position: relative;
+    overflow-x: hidden;
 }
+
+/* Removed complex pseudo-element golf course - now using background image */
 
 /* Header - fixed at top */
 .cg-header { 
@@ -122,6 +129,8 @@
     margin-left: 296px; /* 280px sidebar + 16px gap */
     padding: 16px; 
     min-height: calc(100vh - 80px); /* Account for fixed header */
+    position: relative;
+    z-index: 2;
 }
 
 /* Left sidebar: Score + Target - fixed position */
