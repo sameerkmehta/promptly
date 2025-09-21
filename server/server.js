@@ -3,7 +3,6 @@ import cors from 'cors';
 import { config } from 'dotenv';
 import fs from 'fs';
 import { Buffer } from 'buffer';
-import fetch from 'node-fetch';
 import { CHALLENGES, evaluateGeneratedOutput } from './challenges.js';
 
 import connectDB, { dbConnectionState } from './db.js';
