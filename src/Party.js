@@ -103,9 +103,17 @@ export default function Party() {
   // Show host/join options if game not started
   return (
     <div className="party-container">
-      <header className="party-header">
-        <h1 className="party-title">Party Mode</h1>
-      </header>
+      <nav className="cg-header" style={{ background: 'var(--cg-sky, #cfe8ff)', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '12px 16px', boxShadow: '0 2px 0 #e2f1e8' }}>
+        <div className="cg-brand" style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'start' }}>
+          <img src="/logo192.png" alt="Promptly Logo" style={{ height: 36 }} />
+          <span style={{ fontFamily: 'Grandstander, cursive', fontWeight: 900, fontSize: 24, color: 'var(--cg-tree, #2f7d32)', textShadow: '0 2px 0 #e2f1e8' }}>Promptly</span>
+        </div>
+        <div className="cg-nav" style={{ display: 'flex', gap: 10, justifySelf: 'center' }}></div>
+        <div className="cg-auth" style={{ justifySelf: 'end', display: 'flex', gap: 10 }}>
+          <a href="/" className="cg-party-btn" style={{ background: '#fff', color: 'var(--cg-tree, #2f7d32)', border: '2px solid var(--cg-edge, #c8ddcf)', padding: '8px 16px', borderRadius: 10, fontWeight: 900, boxShadow: '0 4px 0 #d6e6dc', textDecoration: 'none' }}>Main Page</a>
+          <button className="cg-login-btn" style={{ background: 'linear-gradient(135deg, var(--cg-accent, #ffb703), #ffe066)', color: '#4a3000', border: '2px solid #f1c14f', padding: '8px 16px', borderRadius: 10, fontWeight: 900, boxShadow: '0 4px 0 #e0b03f', cursor: 'pointer' }}>Log In</button>
+        </div>
+      </nav>
       <main className="party-main">
         {!hosting && !gameStarted && (
           <div className="party-card">
