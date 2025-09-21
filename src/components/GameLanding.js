@@ -280,9 +280,10 @@ export default function GameLanding() {
 						<button type="button" className="cg-nav-btn" onClick={() => selectHole(1)}>hole2</button>
 						<button type="button" className="cg-nav-btn" onClick={() => selectHole(2)}>hole3</button>
 					</nav>
-					<div className="cg-auth">
-						<button type="button" className="cg-login-btn">Log In</button>
-					</div>
+						<div className="cg-auth" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+							<button type="button" className="cg-party-btn" onClick={() => window.location.href = '/party'}>Party</button>
+							<button type="button" className="cg-login-btn">Log In</button>
+						</div>
 				</header>
 
 				{/* Body: sidebar + full-width content */}

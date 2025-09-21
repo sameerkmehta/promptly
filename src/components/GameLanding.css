@@ -27,6 +27,8 @@
 .cg-auth { justify-self: end }
 .cg-login-btn { background: linear-gradient(135deg, var(--cg-accent), #e0b03f); color: #4a3000; border:2px solid #f1c14f; padding: 8px 16px; border-radius: 10px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #e0b03f }
 .cg-login-btn:hover { transform: translateY(-2px) }
+.cg-party-btn { background: #fff; color: var(--cg-tree); border:2px solid var(--cg-edge); padding: 8px 16px; border-radius: 10px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #d6e6dc; }
+.cg-party-btn:hover { background: var(--cg-fairway); }
 
 /* Body layout */
 .cg-body { display:grid; grid-template-columns: 280px 1fr; gap: 16px; padding: 16px }
