@@ -6,12 +6,153 @@ import { Buffer } from 'buffer';
 import fetch from 'node-fetch';
 import { CHALLENGES, evaluateGeneratedOutput } from './challenges.js';
 
-config();
+import connectDB from './db.js';
+import Party from './Party.js';
 
+config();
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public')); // To serve the generated images
+
+// Connect to MongoDB
+connectDB();
+
+// --- Party API Endpoints ---
+
+// Create a new party with a joinCode
+app.post('/api/parties', async (req, res) => {
+  try {
+    const { name, joinCode, members } = req.body;
+    if (!name || !joinCode) return res.status(400).json({ error: 'Party name and joinCode are required' });
+    // Ensure joinCode is unique
+    const existing = await Party.findOne({ joinCode });
+    if (existing) return res.status(409).json({ error: 'Join code already in use' });
+    const party = new Party({ name, joinCode, members: members || [] });
+    await party.save();
+    res.status(201).json(party);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all parties
+app.get('/api/parties', async (req, res) => {
+  try {
+    const parties = await Party.find();
+    res.json(parties);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get a single party by joinCode
+app.get('/api/parties/code/:joinCode', async (req, res) => {
+  try {
+    const party = await Party.findOne({ joinCode: req.params.joinCode });
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+    res.json(party);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Update a party by joinCode (e.g., add member)
+app.put('/api/parties/code/:joinCode', async (req, res) => {
+  try {
+    const { name, members } = req.body;
+    const party = await Party.findOneAndUpdate(
+      { joinCode: req.params.joinCode },
+      { name, members },
+      { new: true }
+    );
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+    res.json(party);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a submission to a party
+app.post('/api/parties/code/:joinCode/submissions', async (req, res) => {
+  try {
+    const { username, text, genText } = req.body;
+    // Reset winner and votes for a new round
+    const party = await Party.findOneAndUpdate(
+      { joinCode: req.params.joinCode },
+      { $push: { submissions: { username, text, genText } }, $set: { winner: null, votes: {}, voters: [] } },
+      { new: true }
+    );
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+    res.json(party);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update a submission's genText (AI output)
+app.put('/api/parties/code/:joinCode/submissions/:username', async (req, res) => {
+  try {
+    const { genText } = req.body;
+    const party = await Party.findOne({ joinCode: req.params.joinCode });
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+    const sub = party.submissions.find(s => s.username === req.params.username);
+    if (!sub) return res.status(404).json({ error: 'Submission not found' });
+    sub.genText = genText;
+    await party.save();
+    res.json(party);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a vote
+app.post('/api/parties/code/:joinCode/votes', async (req, res) => {
+  try {
+    const { votedUser, voter } = req.body;
+    const party = await Party.findOne({ joinCode: req.params.joinCode });
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+    // Prevent double voting
+    if (party.voters && party.voters.includes(voter)) {
+      return res.status(400).json({ error: 'User has already voted' });
+    }
+    party.votes.set(votedUser, (party.votes.get(votedUser) || 0) + 1);
+    if (!party.voters) party.voters = [];
+    party.voters.push(voter);
+    await party.save();
+    res.json(party);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Set the winner
+app.post('/api/parties/code/:joinCode/winner', async (req, res) => {
+  try {
+    const { winner } = req.body;
+    const party = await Party.findOneAndUpdate(
+      { joinCode: req.params.joinCode },
+      { winner },
+      { new: true }
+    );
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+    res.json(party);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a party by joinCode
+app.delete('/api/parties/code/:joinCode', async (req, res) => {
+  try {
+    const party = await Party.findOneAndDelete({ joinCode: req.params.joinCode });
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+    res.json({ message: 'Party deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 async function generateImage(prompt) {
   const apiKey = process.env.API_KEY;
@@ -80,30 +221,42 @@ async function generateImage(prompt) {
 // Text generation via Gemini
 async function callGemini(prompt) {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error('API_KEY environment variable is not set');
+  if (!apiKey) {
+    console.error('API_KEY environment variable is not set');
+    throw new Error('API_KEY environment variable is not set');
+  }
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
   const body = {
     contents: [{ parts: [{ text: prompt }] }]
   };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'X-goog-api-key': apiKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
-  const txt = await res.text();
+  let res, txt;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-goog-api-key': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    txt = await res.text();
+  } catch (err) {
+    console.error('Network or fetch error calling Gemini API:', err);
+    throw new Error('Network or fetch error calling Gemini API: ' + err.message);
+  }
   if (res.status >= 400) {
+    console.error('Gemini API error:', res.status, txt);
     throw new Error(`Gemini API error ${res.status}: ${txt}`);
   }
   let data;
   try { data = JSON.parse(txt); } catch (e) {
+    console.error('Invalid JSON response from Gemini API:', txt);
     throw new Error(`Invalid JSON response from Gemini API: ${txt}`);
   }
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (text) return text;
-  throw new Error('Unexpected response format from Gemini API');
+  console.error('Unexpected response format from Gemini API:', data);
+  throw new Error('Unexpected response format from Gemini API: ' + JSON.stringify(data));
 }
 
 // Check whether a prompt violates a given safety restraint using Gemini 2.5-flash (text)

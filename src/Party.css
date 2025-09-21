@@ -1,0 +1,154 @@
+/* Party.css — Clean, modern, playful UI for Party page */
+
+.party-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--cg-sky, #cfe8ff) 0 60%, var(--cg-fairway, #b9e6a1) 60% 100%);
+  color: var(--cg-ink, #254336);
+  font-family: 'Nunito', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.party-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0 8px 0;
+  background: none;
+}
+
+.party-title {
+  font-family: 'Grandstander', cursive;
+  font-weight: 900;
+  font-size: 2.2rem;
+  color: var(--cg-tree, #2f7d32);
+  text-shadow: 0 2px 0 #e2f1e8;
+  margin: 0;
+}
+
+.party-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 8px 64px 8px;
+}
+
+.party-card {
+  background: var(--cg-card, #fff);
+  border: 2px solid var(--cg-edge, #c8ddcf);
+  box-shadow: 0 8px 18px var(--cg-shadow, rgba(37,67,54,0.15));
+  border-radius: 18px;
+  padding: 32px 32px 24px 32px;
+  min-width: 320px;
+  max-width: 420px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.party-btn {
+  background: linear-gradient(135deg, var(--cg-accent, #ffb703), #ffe066);
+  color: #4a3000;
+  border: 2px solid #f1c14f;
+  padding: 12px 32px;
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #e0b03f;
+  margin-top: 12px;
+  transition: transform 0.1s;
+}
+.party-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+}
+
+.party-input, .party-code-input {
+  font-size: 1rem;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 2px solid #ccc;
+  margin-bottom: 12px;
+  width: 180px;
+  outline: none;
+  transition: border 0.2s;
+}
+.party-input:focus, .party-code-input:focus {
+  border: 2px solid var(--cg-accent, #ffb703);
+}
+
+.party-label {
+  font-weight: 800;
+  margin-bottom: 8px;
+  align-self: center;
+  font-size: 1.1rem;
+}
+
+.party-theme {
+  color: #22c55e;
+  font-weight: 900;
+  font-size: 1.2rem;
+}
+
+.party-join-code {
+  color: #2563eb;
+  letter-spacing: 2px;
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+.party-error {
+  color: #e11d48;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.party-submission {
+  background: #fff;
+  border: 2px solid #d6e6dc;
+  border-radius: 12px;
+  padding: 18px 16px 12px 16px;
+  min-width: 320px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.party-submission-text {
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+  font-size: 17px;
+  background: #f7faf7;
+  border-radius: 10px;
+  padding: 12px 16px;
+  min-height: 40px;
+  width: 100%;
+  margin: 0;
+  color: #222;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  text-align: left;
+}
+
+.party-winner {
+  font-weight: 900;
+  font-size: 2rem;
+  color: #22c55e;
+  margin: 16px 0;
+}
+
+@media (max-width: 600px) {
+  .party-card, .party-submission {
+    min-width: 0;
+    width: 98vw;
+    padding: 18px 4vw 12px 4vw;
+  }
+  .party-main {
+    padding: 12px 2vw 0 2vw;
+  }
+}
