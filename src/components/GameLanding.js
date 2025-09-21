@@ -20,6 +20,27 @@ export default function GameLanding() {
 		const [error, setError] = useState(null);
 		const [currentEvaluation, setCurrentEvaluation] = useState(null);
 		const [processingPrompt, setProcessingPrompt] = useState('');
+
+		// Prompt limits
+		const MAX_PROMPT_LENGTH = 250; // character limit for prompt textarea
+
+		function handlePromptChange(e) {
+			const raw = e.target.value || '';
+			// Enforce max-length client-side by slicing extra characters
+			const clipped = raw.slice(0, MAX_PROMPT_LENGTH);
+			setPromptText(clipped);
+		}
+
+		function getCounterClass() {
+			if (!promptText) return '';
+			const pct = (promptText.length / MAX_PROMPT_LENGTH) * 100;
+			if (pct >= 100) return 'cg-counter-full';
+			if (pct >= 80) return 'cg-counter-near';
+			return 'cg-counter-normal';
+		}
+
+		// Include previous prompts checkbox (default: true)
+		const [includeHistory, setIncludeHistory] = useState(true);
 		
 		// Challenges state
 		const [challenges, setChallenges] = useState([]);
@@ -133,12 +154,7 @@ export default function GameLanding() {
 		async function submitPrompt(e) {
 			e.preventDefault();
 			if (!challenge) return;
-			const maxStrokes = Math.ceil(2.5 * (challenge.par || 3));
-			if (strokes >= maxStrokes) {
-				setStatus('ended');
-				setError('Out of strokes. Hole ended.');
-				return;
-			}
+			// No max-strokes limit; each submit counts as a stroke
 			const nextStrokes = strokes + 1;
 			const currentPrompt = promptText;
 			setIsLoading(true);
@@ -149,8 +165,16 @@ export default function GameLanding() {
 			setPromptText(''); // Clear prompt immediately for next input
 			setProcessingPrompt(currentPrompt); // Store current prompt for display
 			try {
-				// Step 1: Generate on backend
-				const genResp = await backendGenerate(challenge, currentPrompt);
+				// Build sendPrompt: include previous prompts if requested
+				let sendPrompt = currentPrompt;
+				if (includeHistory && history && history.length > 0) {
+					// history is stored newest-first; reverse to get chronological order
+					const chronological = [...history].slice().reverse();
+					const numbered = chronological.map((h, idx) => `Prompt ${idx + 1}: ${h.prompt}`);
+					sendPrompt = numbered.join('\n') + '\n' + currentPrompt;
+				}
+				// Step 1: Generate on backend using sendPrompt
+				const genResp = await backendGenerate(challenge, sendPrompt);
 				const generation = genResp?.generation;
 				if (!generation) throw new Error('No generation returned');
 
@@ -209,13 +233,7 @@ export default function GameLanding() {
 						if (evaluation?.passed) {
 							setStatus('success');
 						} else {
-							// Check if nextStrokes hits maxStrokes
-							if (nextStrokes >= maxStrokes) {
-								setStatus('ended');
-								setError('You have reached the maximum number of strokes for this hole. Hole ended.');
-							} else {
-								setStatus(null);
-							}
+							setStatus(null);
 						}
 					}, 1200);
 
@@ -339,7 +357,7 @@ export default function GameLanding() {
 						{/* Target box */}
 						<div className="cg-target-card">
 							<div className="cg-score-title">Target</div>
-							<div className="cg-target-media">
+								<div className="cg-target-media cg-target-media-large">
 								{challenge?.frontImage ? (
 									<img
 										src={`http://localhost:3001${challenge.frontImage}`}
@@ -353,19 +371,21 @@ export default function GameLanding() {
 						</div>
 
 
-						{/* Challenge Modifier box (reads modifier from current challenge) */}
-						<div className="cg-target-card">
-							<div className="cg-score-title">Challenge Modifier</div>
-							<div className="cg-target-media">
-								{challenge?.modifier ? (
-									<div style={{ padding: 8 }}>
-										<p style={{ margin: 0 }}>{challenge.modifier.safetyRestraint || JSON.stringify(challenge.modifier)}</p>
-									</div>
-								) : (
-									<div className="cg-target-placeholder">N/A</div>
-								)}
+							{/* Prompt History will be rendered next to the prompt input (not in sidebar) */}
+
+							{/* Challenge Modifier box (reads modifier from current challenge) */}
+							<div className="cg-target-card">
+								<div className="cg-score-title">Challenge Modifier</div>
+								<div className="cg-target-media">
+									{challenge?.modifier ? (
+										<div style={{ padding: 8 }}>
+											<p style={{ margin: 0 }}>{challenge.modifier.safetyRestraint || JSON.stringify(challenge.modifier)}</p>
+										</div>
+									) : (
+										<div className="cg-target-placeholder">N/A</div>
+									)}
+								</div>
 							</div>
-						</div>
 
 					</aside>
 
@@ -378,29 +398,56 @@ export default function GameLanding() {
 										<p>
 											{challenge?.description}
 											<br /><br />
-											To complete the hole, your output must match the target by more than 80%. If you take too many shots (over the allowed limit), you will be forced to give up and the hole will end automatically. Try to finish in as few strokes as possible!
+											To complete the hole, your output must match the target by more than 80%. Try to finish in as few strokes as possible!
 										</p>
 						</section>
 
-						{/* Centered prompt input */}
+						{/* Centered prompt input (single column). Prompt history box removed; include-history is a toggle button below the textarea. */}
 						<div className="cg-centered-prompt">
-							<form className="cg-form" onSubmit={submitPrompt}>
-								<textarea
-									id="prompt-input"
-									className="cg-textarea"
-									placeholder={challenge?.type === 'code' ? 'Paste your JavaScript function code here...' : 'Enter your prompt here...'}
-									value={promptText}
-									onChange={(e) => setPromptText(e.target.value)}
-									rows={challenge?.type === 'code' ? 6 : 4}
-									disabled={isLoading}
-								/>
-								<div className="cg-actions">
-									<button type="submit" className="cg-btn primary" disabled={isLoading}>
-										{isLoading ? 'Generating…' : 'Submit'}
-									</button>
-									<button type="button" className="cg-btn primary" onClick={resetPrompt} disabled={isLoading}>Reset</button>
-								</div>
-							</form>
+							<div className="cg-form-col">
+								<form className="cg-form" onSubmit={submitPrompt}>
+									<textarea
+										id="prompt-input"
+										className="cg-textarea"
+										placeholder={challenge?.type === 'code' ? 'Paste your JavaScript function code here...' : 'Enter your prompt here...'}
+										value={promptText}
+										onChange={handlePromptChange}
+										rows={challenge?.type === 'code' ? 6 : 6}
+										disabled={isLoading}
+										maxLength={MAX_PROMPT_LENGTH}
+									/>
+
+									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 12 }}>
+										<div className={`cg-char-counter ${getCounterClass()}`} style={{ fontSize: 12 }}>
+											{promptText.length}/{MAX_PROMPT_LENGTH}
+										</div>
+
+										<div style={{ display: 'flex', gap: 8 }}>
+											<button type="submit" className="cg-btn primary" disabled={isLoading}>
+												{isLoading ? 'Generating…' : 'Submit'}
+											</button>
+											<button type="button" className="cg-btn" onClick={resetPrompt} disabled={isLoading}>Reset</button>
+
+											{/* Include-history toggle (styled green/red inline) */}
+											<button
+												type="button"
+												className="cg-btn"
+												onClick={() => setIncludeHistory((v) => !v)}
+												disabled={isLoading}
+												style={{
+													background: includeHistory ? '#ecffe9' : '#ffecec',
+													borderColor: includeHistory ? '#cbe7c5' : '#f0c9c9',
+													color: includeHistory ? '#166b27' : '#a22929',
+													padding: '8px 12px',
+													fontWeight: 800
+												}}
+											>
+												{includeHistory ? 'Include History: ON' : 'Include History: OFF'}
+											</button>
+										</div>
+									</div>
+								</form>
+							</div>
 						</div>
 
 						{/* Scrollable attempts stack */}
