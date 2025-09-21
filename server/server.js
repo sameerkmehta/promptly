@@ -6,7 +6,7 @@ import { Buffer } from 'buffer';
 import fetch from 'node-fetch';
 import { CHALLENGES, evaluateGeneratedOutput } from './challenges.js';
 
-import connectDB from './db.js';
+import connectDB, { dbConnectionState } from './db.js';
 import Party from './Party.js';
 
 config();
@@ -15,13 +15,26 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public')); // To serve the generated images
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (non-fatal). If the DB is down we continue running but
+// Party routes will return 503 until the DB becomes available.
+connectDB().then((ok) => {
+  if (!ok) console.warn('Warning: MongoDB not connected at startup — party endpoints will return 503 until it is available.');
+}).catch((e) => {
+  console.warn('Unexpected error while attempting to connect to MongoDB:', e && (e.stack || e.message) || e);
+});
+
+// Middleware to require DB connection for party endpoints
+function requireDB(req, res, next) {
+  const state = dbConnectionState();
+  // mongoose readyState === 1 means connected
+  if (state !== 1) return res.status(503).json({ error: 'Database unavailable' });
+  return next();
+}
 
 // --- Party API Endpoints ---
 
 // Create a new party with a joinCode
-app.post('/api/parties', async (req, res) => {
+app.post('/api/parties', requireDB, async (req, res) => {
   try {
     const { name, joinCode, members } = req.body;
     if (!name || !joinCode) return res.status(400).json({ error: 'Party name and joinCode are required' });
@@ -37,7 +50,7 @@ app.post('/api/parties', async (req, res) => {
 });
 
 // Get all parties
-app.get('/api/parties', async (req, res) => {
+app.get('/api/parties', requireDB, async (req, res) => {
   try {
     const parties = await Party.find();
     res.json(parties);
@@ -47,7 +60,7 @@ app.get('/api/parties', async (req, res) => {
 });
 
 // Get a single party by joinCode
-app.get('/api/parties/code/:joinCode', async (req, res) => {
+app.get('/api/parties/code/:joinCode', requireDB, async (req, res) => {
   try {
     const party = await Party.findOne({ joinCode: req.params.joinCode });
     if (!party) return res.status(404).json({ error: 'Party not found' });
@@ -59,7 +72,7 @@ app.get('/api/parties/code/:joinCode', async (req, res) => {
 
 
 // Update a party by joinCode (e.g., add member)
-app.put('/api/parties/code/:joinCode', async (req, res) => {
+app.put('/api/parties/code/:joinCode', requireDB, async (req, res) => {
   try {
     const { name, members } = req.body;
     const party = await Party.findOneAndUpdate(
@@ -75,7 +88,7 @@ app.put('/api/parties/code/:joinCode', async (req, res) => {
 });
 
 // Add a submission to a party
-app.post('/api/parties/code/:joinCode/submissions', async (req, res) => {
+app.post('/api/parties/code/:joinCode/submissions', requireDB, async (req, res) => {
   try {
     const { username, text, genText } = req.body;
     // Reset winner and votes for a new round
@@ -92,7 +105,7 @@ app.post('/api/parties/code/:joinCode/submissions', async (req, res) => {
 });
 
 // Update a submission's genText (AI output)
-app.put('/api/parties/code/:joinCode/submissions/:username', async (req, res) => {
+app.put('/api/parties/code/:joinCode/submissions/:username', requireDB, async (req, res) => {
   try {
     const { genText } = req.body;
     const party = await Party.findOne({ joinCode: req.params.joinCode });
@@ -108,7 +121,7 @@ app.put('/api/parties/code/:joinCode/submissions/:username', async (req, res) =>
 });
 
 // Add a vote
-app.post('/api/parties/code/:joinCode/votes', async (req, res) => {
+app.post('/api/parties/code/:joinCode/votes', requireDB, async (req, res) => {
   try {
     const { votedUser, voter } = req.body;
     const party = await Party.findOne({ joinCode: req.params.joinCode });
@@ -128,7 +141,7 @@ app.post('/api/parties/code/:joinCode/votes', async (req, res) => {
 });
 
 // Set the winner
-app.post('/api/parties/code/:joinCode/winner', async (req, res) => {
+app.post('/api/parties/code/:joinCode/winner', requireDB, async (req, res) => {
   try {
     const { winner } = req.body;
     const party = await Party.findOneAndUpdate(
@@ -144,7 +157,7 @@ app.post('/api/parties/code/:joinCode/winner', async (req, res) => {
 });
 
 // Delete a party by joinCode
-app.delete('/api/parties/code/:joinCode', async (req, res) => {
+app.delete('/api/parties/code/:joinCode', requireDB, async (req, res) => {
   try {
     const party = await Party.findOneAndDelete({ joinCode: req.params.joinCode });
     if (!party) return res.status(404).json({ error: 'Party not found' });
